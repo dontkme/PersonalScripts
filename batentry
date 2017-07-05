@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+#use 5.0100;
+use Getopt::Long;
+
+use re 'eval';
+our $opfn="";
+our $db="";
+our $strand="plus";
+my $verbose;
+
+GetOptions("o=s" => \$opfn,"db=s" => \$db,"verbose"=>\$verbose)
+or die("Error in command line arguments\nUsage: perl batentry [-o outfile_name] [-db database] <input_entrylist>\n");
+
+#print "blastdb: $db\n";
+
+if ($db eq ""){
+    die ("[-] Error: Can't open blastdb $db\n");
+}
+
+our $cmdis='blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand >>$opfn';
+if ($opfn eq ""){
+    #$opfn="";
+    $cmdis='blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand ';
+}else{
+	print "Output file:$opfn\n";
+}
+#open OUT, "> $opfn" or die ("[-] Error: Can't open or creat $opfn\n");
+
+
+
+my $count=0;
+
+our $gene="gene";
+while(defined(our $line = <>)){
+	chomp $line;
+   my @entry=split/\t/,$line;
+   #print "$entry[1]\n";
+   if ($entry[4] eq "-") {
+       $strand="minus";
+   }elsif ($entry[4] eq "+"){
+       $strand="plus";
+   } 
+#   print "$cmdis\n";
+#   system "$cmdis";
+if ($opfn eq "") {
+	system "blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand";
+}else {
+	system "blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand >>$opfn";
+}
+   #system "blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand ";
+   #system "blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand >>$opfn";
+   #print "blastdbcmd -db $db -entry $entry[1] -range $entry[2]\-$entry[3] -strand $strand >>$opfn\n";
+   $count++;
+}
+#print "Done $count lines.\n"
+#% (for LINE in batch.txt ; do blastdbcmd -db mydb $LINE ; done) > output.fasta
