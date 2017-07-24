@@ -1,0 +1,10 @@
+#PBS -N fastQC_2
+#PBS -l nodes=1:ppn=4
+#PBS -q batch
+#PBS -V 
+cd /public/home/knhu/ZZQ/20170620RNAseq
+#perl /public/home/knhu/biosoft/FastQCv0.11.4/fastqc -t 2 *.fastq 
+#perl /public/home/knhu/biosoft/FastQC/fastqc -t 2 *.fq 
+#perl /public/home/knhu/biosoft/FastQCv0.11.4/FastQC/fastqc -t 2 *.fq 
+#perl /public/home/knhu/biosoft/FastQCv0.11.4/FastQC/fastqc -t 2 -o ./afterqc *.fq 
+perl /public/home/knhu/biosoft/FastQCv0.11.4/FastQC/fastqc -t 2 -o ./rawqc *.fastq 
