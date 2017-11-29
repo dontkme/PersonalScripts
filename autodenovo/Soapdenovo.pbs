@@ -1,0 +1,8 @@
+#PBS -N SOAPdnvB
+         #PBS -l nodes=node62:ppn=7
+         #PBS -q batch   
+#PBS -V
+cd /public/home/knhu/HMY/BSA/Bdenovo 
+time sh soaploop.sh
+ 
+
