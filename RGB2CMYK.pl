@@ -54,7 +54,7 @@ print OUT "C\tM\tY\tK\n";
 while(defined(our $RGBfile=<>)){
   $count1++;
   my @RGB=split/\t/,$RGBfile;
-  print $RGB[0]."\n";
+  #print $RGB[0]."\n";
   my $R=$RGB[0]/255;
   my $G=$RGB[1]/255;
   my $B=$RGB[2]/255;
