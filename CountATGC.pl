@@ -60,7 +60,7 @@ printf "%g Sec %g Min\n",$loadingendtime-$loadingstarttime,($loadingendtime-$loa
 
 if ($opfn eq ""){
 	$opfn="ATout";
-	print "Output file: ATout.txt \n";
+	print "Output file: ATGCout.txt \n";
 }else{
 	print "Output file: $opfn.txt \n";
 }
