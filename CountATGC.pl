@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
 #AUTHORS
-# Kaining Hu (c) 2017
-# Count Seq ATGC (CountATGC)v1.0000 2018/03/08
+# Kaining Hu (c) 2018
+# Count Seq ATGC (CountATGC)v1.1000 2018/03/09
 # hukaining@gmail.com
 
 use strict;
@@ -26,7 +26,7 @@ GetOptions("o=s" => \$opfn,"verbose"=>\$verbose)
 or die("Error in command line arguments\nUsage: perl countATGC [-o outfileprefix] <inputfile>\n");
 our $loadingstarttime=time();
 
-print "Start loading genomeic sequence.\n";
+print "Start loading genomeic sequence(s).\n";
 #if(!open SEQFILENAME,"< $seqfilename"){
 # die "File not Found\n";
 #}
@@ -38,6 +38,7 @@ our @Chrname=();
 our @Chrseq=();
 #@ARGV = qw#''  Not_Find_a_File#;
 #say @ARGV;
+#say $ARGV[0];
 #say $0;
 while(defined(our $seq = <>)){
 #while(our $seq = <SEQFILENAME>){
@@ -59,14 +60,14 @@ print "Finished loading!\n";
 printf "%g Sec %g Min\n",$loadingendtime-$loadingstarttime,($loadingendtime-$loadingstarttime)/60;
 
 if ($opfn eq ""){
-	$opfn="ATout";
-	print "Output file: ATGCout.txt \n";
+	$opfn="ATGCNout";
+	print "Output file: ATout.txt \n";
 }else{
 	print "Output file: $opfn.txt \n";
 }
 
 open OUT, "> $opfn.txt" or die ("[-] Error: Can't open or creat $opfn.fa\n");
-print OUT "Seq\tA\tT\tG\tC\tAT\tGC\tAll\tA\tT\tG\tC\tAT\tGC\n";
+print OUT "Seq\tA\tT\tG\tC\tN\tAT\tGC\tAll\tA\tT\tG\tC\tN\tAT\tGC\n";
 our $starttime=time();
 #  our $countA=0;
 #	our $countT=0;
@@ -82,6 +83,7 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	our $countT=0;
 	our $countG=0;
 	our $countC=0;
+	our $countN=0;
 	our $oneseql=0;
 	our $oneseq = $Chrseq[$ni];
 	our $countAT=0;
@@ -92,12 +94,13 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	 $countT = $oneseq=~ tr/T/T/;
 	 $countG = $oneseq=~ tr/G/G/;
 	 $countC = $oneseq=~ tr/C/C/;
-	print "$Chrname[$ni]: A=$countA, T=$countT, G=$countG, C=$countC, All= $oneseql\n";
-	printf "$Chrname[$ni]: A=%g, T=%g, G=%g, C=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+	 $countN = $oneseq=~ tr/N/N/;
+	print "$Chrname[$ni]: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All= $oneseql\n";
+	printf "$Chrname[$ni]: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
   $countAT=$countA+$countT;
   $countGC=$countG+$countC;
-  print OUT "$Chrname[$ni]\t$countA\t$countT\t$countG\t$countC\t$countAT\t$countGC\t$oneseql";
-  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+  print OUT "$Chrname[$ni]\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql";
+  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
    $seqall.=$oneseq;
 }
 
@@ -105,6 +108,7 @@ our $countA=0;
 	our $countT=0;
 	our $countG=0;
 	our $countC=0;
+	our $countN=0;
 	our $oneseql=0;
 	our $oneseq = $seqall;
 	our $countAT=0;
@@ -115,12 +119,13 @@ our $countA=0;
 	 $countT = $oneseq=~ tr/T/T/;
 	 $countG = $oneseq=~ tr/G/G/;
 	 $countC = $oneseq=~ tr/C/C/;
-	print "All: A=$countA, T=$countT, G=$countG, C=$countC, All= $oneseql\n";
-	printf "All: A=%g, T=%g, G=%g, C=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+	 $countN = $oneseq=~ tr/N/N/;
+	print "All: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All= $oneseql\n";
+	printf "All: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
   $countAT=$countA+$countT;
   $countGC=$countG+$countC;
-  print OUT "All\t$countA\t$countT\t$countG\t$countC\t$countAT\t$countGC\t$oneseql";
-  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+  print OUT "All\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql";
+  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
 
 	close OUT;
 	our $endtime=time();
