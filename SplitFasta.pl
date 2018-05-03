@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2018
-# split fasta file to saparate files. (EAHelitron)v1.0000 2018/05/02
+# Split fasta file to saparate files. (SplitFasta)v1.0001 2018/05/03
 # hukaining@gmail.com
 
 use strict;
@@ -19,7 +19,7 @@ our $opfn="";
 my $verbose;
 #our $upstreml=3000;
 our $opdir='./';
-our $suffix='.fasta';
+our $suffix='';
 #GetOptions("i=s"=>\$seqfilename,"o=s" => \$opfn,"verbose"=>\$verbose)
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
 GetOptions("o=s" => \$opdir,"verbose"=>\$verbose,"s=s"=>\$suffix)
