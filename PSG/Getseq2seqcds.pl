@@ -24,7 +24,7 @@ our $opdir = "./Getseq2seqcdsOut";
 
 
 GetOptions("o=s" => \$opdir,"verbose"=>\$verbose,"c1=s"=>\$cds1,"c2=s"=>\$cds2)
-or die("Error in command line arguments\nUsage: 	perl RandomDNA.pl [options] -c1 <First_cds_fasta_file> -c2 <Second_cds_fasta_file> <Input 2seq name file>\n
+or die("Error in command line arguments\nUsage: 	perl Getseq2seqcds.pl [options] -c1 <First_cds_fasta_file> -c2 <Second_cds_fasta_file> <Input 2seq name file>\n
 	 options:\n
 	 [-o string|output dir default: ./Getseq2seqcdsOut]\n
 	 [-c1 string|CDS fasta file1]\n
