@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2018
-# FindSSR v1.0000 2018/09/10
+# FindSSR v1.0001 2018/09/11
 # hukaining@gmail.com
 
 use strict;
@@ -76,7 +76,7 @@ print "$Chri Sequences\n";
 print "Finished loading!\n";
 printf "%g Sec %g Min\n",$loadingendtime-$loadingstarttime,($loadingendtime-$loadingstarttime)/60;
 if ($opfn eq ""){
-$opfn="EAHeli_out";
+$opfn="findSSR_out";
 print "Output files: $opfn.53.txt $opfn.ssr.fa $opfn.gff3\n";
 }else{
 print "Output files: $opfn.53.txt $opfn.ssr.fa $opfn.gff3\n";
@@ -86,7 +86,7 @@ print "Output files: $opfn.53.txt $opfn.ssr.fa $opfn.gff3\n";
 our $starttime=time();
 #our $hairpinpattern="cccgccc";
 #say our $testseq='((GA){4,20})';
-say our $testseq='([atcg]{10}(([atcg]{2,8})(\3{3,50}))[atcg]{10})';
+say our $testseq='([atcg]{10}(([atcg]{1,8})(\3{3,50}))[atcg]{10})';
 #say our $TCseq='([atgcn]{5}(TC(TCTACTA|T.TACTA.T|T.TACTAC|.{2}TACTACT|T.TAC.ACT|T.TA.TACT|T.TACT.CT|T.T.CTACT|.CTACTA.T|.{9}TATTAAG))[atgcn]{20})';
 print "Running. Please wait for a minite.\n";
 #####################################
@@ -127,6 +127,8 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	# our $seqdownpos=$seqpos+$downstreml;
 	our $ChrID=$Chrname[$ni];
     if ($ssrl>100){
+        next;
+    } elsif ($motifl==1 and $ssrl <12 ){
         next;
     } elsif ($motifl==2 and $ssrl <12 ){
         next;
