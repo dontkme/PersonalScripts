@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2018
-# FindSSR v1.0001 2018/09/11
+# FindSSR v1.2100 2018/09/12
 # hukaining@gmail.com
 
 use strict;
@@ -17,14 +17,24 @@ use Time::HiRes 'time';
 use re 'eval';
 our $opfn="";
 my $verbose;
- our $upstreml=3000;
- our $downstreml=1100;
+ our $upstreml=10;
+ our $downstreml=10;
+ our $maxnt=8;
+ our $minnt=1;
+ our $re=3;
 #our $seqfilename ='';
 #GetOptions("i=s"=>\$seqfilename,"o=s" => \$opfn,"verbose"=>\$verbose)
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
-GetOptions("o=s" => \$opfn,"verbose"=>\$verbose,"u=i"=>\$upstreml,"d=i"=>\$downstreml)
-or die("Error in command line arguments\nUsage: perl FindSSR.pl [-o outfileprefix] <inputFASTA>
-#AUTHORS
+GetOptions("o=s" => \$opfn,"verbose"=>\$verbose,"u=i"=>\$upstreml, "d=i"=>\$downstreml, "min=i"=>\$minnt, "max=i"=>\$maxnt) 
+# GetOptions("o=s" => \$opfn,"verbose"=>\$verbose,"u=i"=>\$upstreml, "d=i"=>\$downstreml) 
+or die("Error in command line arguments\nUsage: perl FindSSR.pl [options] <inputFASTA>
+options:
+[-o outfileprefix| defaults:findSSR_out]
+[-u upstream length| default:10]
+[-d downstream length| default:10]
+[--min min motif length| default:1 (1-8)]
+[--max max motif length| default:8 (1-8)]
+#AUTHOR
 # Kaining Hu (c) 2018
 # FindSSR v1.0000 2018/09/10
 # hukaining\@gmail.com
@@ -41,7 +51,12 @@ sub TRseq($)
 	 return  $pinseqtr;
 }
 ##################TRseq End#############
+if ($minnt>$maxnt){
+    die ("[-] Error: --min larger than --max \n");
 
+} elsif ($maxnt> 8){
+    die ("[-] Error: --max must <=8 \n");   
+}
 our $loadingstarttime=time();
 
 print "Start loading genomeic sequence.\n";
@@ -57,6 +72,10 @@ our @Chrseq=();
 #@ARGV = qw#''  Not_Find_a_File#;
 #say @ARGV;
 #say $0;
+if (not $ARGV[0]) {
+	die ("[-] Error: Not find a input FASTA file.\n");
+}
+
 while(defined(our $seq = <>)){
     
 	if ($seq =~ m/^.*>/) {
@@ -86,7 +105,9 @@ print "Output files: $opfn.53.txt $opfn.ssr.fa $opfn.gff3\n";
 our $starttime=time();
 #our $hairpinpattern="cccgccc";
 #say our $testseq='((GA){4,20})';
-say our $testseq='([atcg]{10}(([atcg]{1,8})(\3{3,50}))[atcg]{10})';
+# say our $testseq='([atcg]{10}(([atcg]{1,8})(\3{3,50}))[atcg]{10})';
+ say our $testseq='([atcg]{'.$upstreml.'}(([atcg]{'.($minnt).'})(\3{'.($maxnt-$minnt).',50}))[atcg]{'.$downstreml.'})';
+
 #say our $TCseq='([atgcn]{5}(TC(TCTACTA|T.TACTA.T|T.TACTAC|.{2}TACTACT|T.TAC.ACT|T.TA.TACT|T.TACT.CT|T.T.CTACT|.CTACTA.T|.{9}TATTAAG))[atgcn]{20})';
 print "Running. Please wait for a minite.\n";
 #####################################
@@ -103,9 +124,31 @@ our $ssrcount=0;
 for (our $ni=0;$ni<$Chri;$ni++){
 	say "Deal with $Chrname[$ni].";
 	our $count1=0;
-	our $seqall = $Chrseq[$ni];
+	for (our $i=$minnt;$i<=$maxnt;$i++){
+		our $seqall = $Chrseq[$ni];
+		if ($i == 1){
+			$re=12;
+			# $testseq='([atcg]{10}((([atcg])[^\3]{'.$i-1.'})(\4{'.$re.',50}))[atcg]{10})';
+		} elsif($i ==2) {
+			$re=6;
+			#  $testseq='([atcg]{10}((([atcg])[^\3]{'.($i-1).'})(\4{'.$re.',50}))[atcg]{10})';
+		} elsif ($i==3) {
+			$re=5;
+            # say $testseq='
+            # (
+            #     [ATGC]{10}
+            #     (
+            #         ([^A]{3}|[^T]{3}|[^G]{3}|[^C]{3}|[^N]{3})
+            #         (\3{'.($re-1).',50})
+            #     )[atcg]{10}
+            # )';
+		} else {
+			$re=3;
+		}
+		 $testseq='([atcg]{'.$upstreml.'}(([atcg]{'.($i).'})(\3{'.($re-1).','.(int(100/$i)).'}))[atcg]{'.$downstreml.'})';
+		#   $testseq='([atcg]{'.$upstreml.'}(([atcg]{'.($i).'})(\3{'.($re-1).','.(99).'}))[atcg]{'.$downstreml.'})';
     ################Start deal with plus seqs.################
-    while ($seqall=~ /$testseq/igc){
+    while ($seqall=~ /$testseq/igcx){
  
 	#say "Chrom:",$AN;
 	
@@ -116,6 +159,7 @@ for (our $ni=0;$ni<$Chri;$ni++){
     # say "s2: $2";
     # say "s3: $3";
     # say "s4: $4";
+    # say "s5: $5";
     our $motif=$3;
     our $motifl=length($3);
     our $ssr=$2;
@@ -128,13 +172,18 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	our $ChrID=$Chrname[$ni];
     if ($ssrl>100){
         next;
-    } elsif ($motifl==1 and $ssrl <12 ){
+	} elsif($i>=2 and $motif =~ /[A]{$i}|[T]{$i}|[G]{$i}|[C]{$i}/i){
         next;
-    } elsif ($motifl==2 and $ssrl <12 ){
-        next;
-    } elsif ($motifl==3 and $ssrl <15) {
+    } elsif ($i>=4 and $motif =~ /\A([ATGC]{2,4})\1{1,3}\Z/i){
         next;
     }
+    # } elsif (($motifl==1) and ($ssrl <12) ){
+    #     next;
+    # } elsif (($motifl==2) and ($ssrl <12) ){
+    #     next;
+    # } elsif (($motifl==3) and ($ssrl <15)) {
+    #     next;
+    # }
     $count1++;
     $ssrcount++;
 	our $HID ="$ChrID"."SSR$count1";
@@ -156,8 +205,8 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	# our $downfasta = substr($seqall,$seqpos,$downstreml);
 	# print DOWNFA "$downfasta\n";
 	
-	print OUTGFF "$ChrID\tFindSSR\tCDS\t".($seqstarpos+10)."\t".($seqpos-10)."\t.\t+\t.\tName=$HID;ID=$HID;Parent=$HID;Type=$motif;Super_Family=$repeatn\n";
-	print FASTARESULT ">$HID $ChrID:".($seqstarpos+10)."..".($seqpos-10)."  $motif $motifl $repeatn $ssr $ssrl\n";
+	print OUTGFF "$ChrID\tFindSSR\tCDS\t".($seqstarpos+$upstreml)."\t".($seqpos-$downstreml)."\t.\t+\t.\tName=$HID;ID=$HID;Parent=$HID;Type=$motif;Super_Family=$repeatn\n";
+	print FASTARESULT ">$HID $ChrID:".($seqstarpos+$upstreml)."..".($seqpos-$downstreml)."  $motif $motifl $repeatn $ssr $ssrl\n";
 	print FASTARESULT "$ssr\n";
 	# our $TCi=0;
 	# #say our $TCseq='([atgcn]{10}(TC(TCTACTA|T.TACTA.T|T.TACTAC|.{2}TACTACT|T.TAC.ACT|T.TA.TACT|T.TACT.CT|T.T.CTACT|.CTACTA.T|.{9}TATTAAG))[atgcn]{15})';
@@ -165,6 +214,7 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	
 	
     }
+	}
     ################ deal with plus seqs End#################
 
 
