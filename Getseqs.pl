@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2018
-# Get Sequences from GFF with genome v1.0000 2018/09/09
+# Get Sequences from GFF with genome v1.1001 2018/09/12
 # hukaining@gmail.com
 
 use strict;
@@ -27,7 +27,7 @@ our $feature="mRNA";
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
 GetOptions("o=s" => \$opfn,"verbose"=>\$verbose,"u=i"=>\$upstreml,"d=i"=>\$downstreml, "g=s"=>\$annot,"f=s"=>\$feature,"s=s"=>\$sortID)
 or die("[-]Error in command line arguments
-  Usage: perl EAHelitron [options] <-g string|GFF annoation file> <input FASTA file>
+  Usage: perl Getseqs [options] <-g string|GFF annoation file> <input FASTA file>
     options:
     [-o string|outprefix Default: getseqsOut]
     [-s string|Specify attribute type in GFF annotation for sorting. default: ID]
@@ -35,7 +35,7 @@ or die("[-]Error in command line arguments
     [-u int|upstream length Default: 5000]
     [-d int|downstream length Default: 5000]
 	 
-    Note: Get Sequences from GFF with genome v1.0000 2018/09/09.\n");
+    Note: Get Sequences from GFF with genome v1.1000 2018/09/12.\n");
 
 ###################sub TRseq##########
  
@@ -68,11 +68,18 @@ if ($downstreml >= 0){
 } else {
     die ("[-] Error: Downstream lenghth must be zero or greater\n");
 }
+
+open OUTALL, "> $opfn.u$upstreml.d$downstreml.fa" or die ("[-] Error: Can't open or creat $opfn.u$upstreml.d$downstreml.fa\n");
+
+
 ####################Output files End###########
 
 ################
 # Loading Genome.
 ################
+if (not $ARGV[0]) {
+	die ("[-] Error: Not find a input Genome FASTA file.\n");
+}
 our $loadingstarttime=time();
 # print @ARGV;
 # if (@ARGV eq "") {
@@ -164,7 +171,7 @@ while(defined(our $inrow = <ANNOT>)){
         my $upfinalseq="";
         if ($seqstartpos<$upstreml){
             print OUTUP ">$faheadid.up$upstreml"."  $seqchrid:1..$seqstartpos $plusminus\n";
-            $upfinalseq = substr($Chrid2seq{$seqchrid},1,$seqstartpos);
+            $upfinalseq = substr($Chrid2seq{$seqchrid},0,$seqstartpos);
         }else{
             print OUTUP ">$faheadid.up$upstreml"."  $seqchrid:".($seqstartpos-$upstreml)."..$seqstartpos $plusminus\n";
             $upfinalseq = substr($Chrid2seq{$seqchrid},$seqstartpos-$upstreml,$upstreml);
@@ -177,7 +184,17 @@ while(defined(our $inrow = <ANNOT>)){
         $downfinalseq = substr($Chrid2seq{$seqchrid},$seqendpos,$downstreml);
         print OUTDOWN ">$faheadid.down$downstreml"."  $seqchrid:$seqendpos..".($seqstartpos+$downstreml)." $plusminus\n";
         print OUTDOWN "$downfinalseq\n";
+        
+        my $useqd="";
+        if ($seqstartpos<$upstreml){
+            print OUTALL ">$faheadid.u$upstreml.d$downstreml"."  $seqchrid:1..".($seqendpos+$downstreml)." $plusminus\n";
+            $useqd = substr($Chrid2seq{$seqchrid},0,($seqendpos+$downstreml));
+        }else{
+            print OUTALL ">$faheadid.u$upstreml.d$downstreml"."  $seqchrid:".($seqstartpos-$upstreml)."..".($seqendpos+$downstreml)." $plusminus\n";
+            $useqd = substr($Chrid2seq{$seqchrid},($seqstartpos-$upstreml-1),($upstreml+$seqendpos-$seqstartpos+1+$downstreml));
 
+        }
+        print OUTALL "$useqd\n";
     
     } elsif($plusminus eq "-"){
         my $finalseq= TRseq(substr($Chrid2seq{$seqchrid},$seqstartpos-1,$seqendpos-$seqstartpos+1));
@@ -202,6 +219,18 @@ while(defined(our $inrow = <ANNOT>)){
         $upfinalseq = TRseq(substr($Chrid2seq{$seqchrid},$seqendpos,$upstreml));
         print OUTUP ">$faheadid.up$upstreml"."  $seqchrid:$seqendpos..".($seqendpos+$upstreml)." $plusminus\n";
         print OUTUP "$upfinalseq\n";
+
+        my $useqd="";
+        if ($seqstartpos<$downstreml){
+            print OUTALL ">$faheadid.u$upstreml.d$downstreml"."  $seqchrid:1..".($seqendpos+$upstreml)." $plusminus\n";
+            $useqd = TRseq(substr($Chrid2seq{$seqchrid},0,($seqendpos+$upstreml-1)));
+            print OUTALL "$useqd\n";
+        }else{
+            print OUTALL ">$faheadid.u$upstreml.d$downstreml"."  $seqchrid:".($seqstartpos-$downstreml)."..".($seqendpos+$upstreml)." $plusminus\n";
+            $useqd = TRseq(substr($Chrid2seq{$seqchrid},($seqstartpos-$downstreml-1),($upstreml+$seqendpos-$seqstartpos+1+$downstreml)));
+            print OUTALL "$useqd\n";
+
+        }
 
     }
 
