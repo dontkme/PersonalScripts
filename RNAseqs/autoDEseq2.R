@@ -85,6 +85,9 @@ return(comname)
 }
 
 for (i in 1:(length(Congroups)/2)) {
+    if (file.exists( paste("res",Congroups[1,i],"vs",Congroups[2,i],".txt",sep="_"))){
+    next
+}
 autores("Group",Congroups[1,i],Congroups[2,i])
 }
 }
