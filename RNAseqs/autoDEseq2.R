@@ -25,21 +25,21 @@ pdf(pdfname)
 pheatmap(sampleDistMatrix,
 clustering_distance_rows=sampleDists,
 clustering_distance_cols=sampleDists,
-col=colors)
+col=colors, fontsize = 4)
 dev.off()
 tiffname<-paste(compicname,".tiff")
-tiff(tiffname)
+tiff(tiffname, width = 2000,height = 2000)
 pheatmap(sampleDistMatrix,
 clustering_distance_rows=sampleDists,
 clustering_distance_cols=sampleDists,
-col=colors)
+col=colors, fontsize = 14)
 dev.off()
 pngname<-paste(compicname,".png")
-png(pngname)
+png(pngname, width = 2000,height = 2000)
 pheatmap(sampleDistMatrix,
 clustering_distance_rows=sampleDists,
 clustering_distance_cols=sampleDists,
-col=colors)
+col=colors, fontsize = 14)
 dev.off()
 autoPCA <- function(n){
 compicname<-"PCA"
