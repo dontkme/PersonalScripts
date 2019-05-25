@@ -21,7 +21,7 @@ short=$prefix
 #short=$(echo $prefix | sed 's/\(.*\)R.*/\1/')
 #echo $short
 #echo "#PBS -N $short.2Bnafr " >$short.lsf
-echo "#BSUB -J $short.2Bnafr " >$short.lsf
+echo '#BSUB -J $short.2Bnafr ' >$short.lsf
 #echo '#PBS -l nodes=1:ppn=4' >>$short.lsf
 echo '#BSUB -n 4' >>$short.lsf
 echo '#BSUB -M 16G' >>$short.lsf
