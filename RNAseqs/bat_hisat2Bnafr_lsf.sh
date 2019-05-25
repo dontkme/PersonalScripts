@@ -21,7 +21,7 @@ short=$prefix
 #short=$(echo $prefix | sed 's/\(.*\)R.*/\1/')
 #echo $short
 #echo "#PBS -N $short.2Bnafr " >$short.lsf
-echo '#BSUB -J $short.2Bnafr ' >$short.lsf
+echo "#BSUB -J $short.2Bnafr" >$short.lsf
 #echo '#PBS -l nodes=1:ppn=4' >>$short.lsf
 echo '#BSUB -n 4' >>$short.lsf
 echo '#BSUB -M 16G' >>$short.lsf
@@ -36,6 +36,8 @@ echo '#BSUB -e %J.err' >>$short.lsf
 echo "hisat2 -p 4 -x $reffa -1 $file1 -2 $file2 --max-intronlen 20000 --dta -S ${short}.sam" >>$short.lsf
 echo "samtools flagstat -@ 4 ${short}.sam >$short.flagstat" >>$short.lsf
 #echo "samtools view -b -o $short.bam $short.sam" >>$short.NH1.lsf
+echo "samtools sort -@ 4 -o $short.sort.bam $short.sam " >>$short.lsf
+echo "samtools index -@ 4 $sort.sort.bam" >>$short.lsf
 echo "samtools view -H $short.sam >$short.NH1.sam" >>$short.lsf
 echo "grep -P \"NH:i:1\$\" $short.sam >>$short.NH1.sam" >>$short.lsf
 echo "samtools view -@ 4 -b -o $short.NH1.bam $short.NH1.sam" >>$short.lsf
@@ -46,7 +48,7 @@ echo "samtools view -@ 4 -f 2 -b -o ${short}f2.NH1.bam $short.NH1.bam">>$short.l
 #samtools sort -@ 10 Bf2.bam Bf2.sort
 echo "samtools sort -@ 4 ${short}f2.NH1.bam -o ${short}f2.NH1.sort.bam" >>$short.lsf
 #echo "samtools sort -@ 4 ${short}.bam -o ${short}.sort.bam" >>$short.lsf
-echo "samtools index ${short}f2.NH1.sort.bam" >>$short.lsf
+echo "samtools index -@ 4 ${short}f2.NH1.sort.bam" >>$short.lsf
 #echo "echo \"$short RNA hisat2 $reffa  done.\" " >>$short.lsf
 echo "samtools flagstat -@ 4 ${short}f2.NH1.sort.bam >${short}f2.NH1.flagstat" >>$short.lsf
 echo "echo \"$short RNA hisat2 $reffa  done.\" " >>$short.lsf
