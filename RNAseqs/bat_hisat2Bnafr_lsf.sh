@@ -33,7 +33,7 @@ echo '#BSUB -e %J.err' >>$short.lsf
 #echo '#PBS -V ' >>$short.lsf
 #echo "cd $(pwd)" >>$short.lsf
 #echo "hisat2 -p 4 -x $reffa -1 $file1 -2 $file2 -U $Ufile1 -U $Ufile2 --max-intronlen 30000 -S ${short}.sam" >>$short.lsf
-echo "hisat2 -p 4 -x ../$reffa -1 $file1 -2 $file2 --max-intronlen 20000 -S ${short}.sam" >>$short.lsf
+echo "hisat2 -p 4 -x $reffa -1 $file1 -2 $file2 --max-intronlen 20000 --dta -S ${short}.sam" >>$short.lsf
 echo "samtools flagstat -@ 4 ${short}.sam >$short.flagstat" >>$short.lsf
 #echo "samtools view -b -o $short.bam $short.sam" >>$short.NH1.lsf
 echo "samtools view -H $short.sam >$short.NH1.sam" >>$short.lsf
