@@ -37,7 +37,7 @@ echo "hisat2 -p 4 -x $reffa -1 $file1 -2 $file2 --max-intronlen 20000 --dta -S $
 echo "samtools flagstat -@ 4 ${short}.sam >$short.flagstat" >>$short.lsf
 #echo "samtools view -b -o $short.bam $short.sam" >>$short.NH1.lsf
 echo "samtools sort -@ 4 -o $short.sort.bam $short.sam " >>$short.lsf
-echo "samtools index -@ 4 $sort.sort.bam" >>$short.lsf
+echo "samtools index -@ 4 $short.sort.bam" >>$short.lsf
 echo "samtools view -H $short.sam >$short.NH1.sam" >>$short.lsf
 echo "grep -P \"NH:i:1\$\" $short.sam >>$short.NH1.sam" >>$short.lsf
 echo "samtools view -@ 4 -b -o $short.NH1.bam $short.NH1.sam" >>$short.lsf
