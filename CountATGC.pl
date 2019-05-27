@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
 #AUTHORS
-# Kaining Hu (c) 2018
-# Count Seq ATGC (CountATGC)v1.1000 2018/03/09
+# Kaining Hu (c) 2019
+# Count Seq ATGCN (CountATGC)v1.2000 2019/05/27
 # hukaining@gmail.com
 
 use strict;
@@ -67,7 +67,7 @@ if ($opfn eq ""){
 }
 
 open OUT, "> $opfn.txt" or die ("[-] Error: Can't open or creat $opfn.fa\n");
-print OUT "Seq\tA\tT\tG\tC\tN\tAT\tGC\tAll\tA\tT\tG\tC\tN\tAT\tGC\n";
+print OUT "Seq\tA\tT\tG\tC\tN\tAT\tGC\tAll\tATGC\tA\tT\tG\tC\tN\tAT\tGC\tATGC\n";
 our $starttime=time();
 #  our $countA=0;
 #	our $countT=0;
@@ -88,6 +88,7 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	our $oneseq = $Chrseq[$ni];
 	our $countAT=0;
 	our $countGC=0;
+	our $countnN=0;
 	$oneseq=~s/\s//;
    $oneseql=length($oneseq);
 	 $countA = $oneseq=~ tr/A/A/;
@@ -95,12 +96,13 @@ for (our $ni=0;$ni<$Chri;$ni++){
 	 $countG = $oneseq=~ tr/G/G/;
 	 $countC = $oneseq=~ tr/C/C/;
 	 $countN = $oneseq=~ tr/N/N/;
-	print "$Chrname[$ni]: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All= $oneseql\n";
-	printf "$Chrname[$ni]: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+	 $countnN = $countA + $countT + $countG +$countC;
+	print "$Chrname[$ni]: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All=$oneseql, AllnotN=$countnN\n";
+	printf "$Chrname[$ni]: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g, ATGC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql, $countnN/$oneseql;
   $countAT=$countA+$countT;
   $countGC=$countG+$countC;
-  print OUT "$Chrname[$ni]\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql";
-  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+  print OUT "$Chrname[$ni]\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql\t$countnN";
+  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql, $countnN/$oneseql;
    $seqall.=$oneseq;
 }
 
@@ -110,9 +112,10 @@ our $countA=0;
 	our $countC=0;
 	our $countN=0;
 	our $oneseql=0;
-	our $oneseq = $seqall;
+	our $oneseq = $seqall; #Whole genome.
 	our $countAT=0;
 	our $countGC=0;
+	our $countnN=0;
 	$oneseq=~s/\s//;
    $oneseql=length($oneseq);
 	 $countA = $oneseq=~ tr/A/A/;
@@ -120,12 +123,13 @@ our $countA=0;
 	 $countG = $oneseq=~ tr/G/G/;
 	 $countC = $oneseq=~ tr/C/C/;
 	 $countN = $oneseq=~ tr/N/N/;
-	print "All: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All= $oneseql\n";
-	printf "All: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g \n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+	 $countnN = $countA + $countT + $countG +$countC;
+	print "All: A=$countA, T=$countT, G=$countG, C=$countC, N=$countN, All=$oneseql, AllnotN=$countnN\n";
+	printf "All: A=%g, T=%g, G=%g, C=%g, N=%g, AT=%g, GC=%g, ATGC=%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql, ($countnN)/$oneseql;
   $countAT=$countA+$countT;
   $countGC=$countG+$countC;
-  print OUT "All\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql";
-  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql;
+  print OUT "All\t$countA\t$countT\t$countG\t$countC\t$countN\t$countAT\t$countGC\t$oneseql\t$countnN";
+  printf OUT "\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", $countA/$oneseql, $countT/$oneseql, $countG/$oneseql, $countC/$oneseql, $countN/$oneseql, ($countA+$countT)/$oneseql, ($countG+$countC)/$oneseql, $countnN/$oneseql;
 
 	close OUT;
 	our $endtime=time();
