@@ -17,8 +17,8 @@ echo "#BSUB -q normal" >>$OUTpbsname
 #echo "#PBS -q test" >>$OUTpbsname
 #echo "#PBS -V " >>$OUTpbsname
 #echo "cd $usrpwd" >>$OUTpbsname
-echo "time" >>$OUTpbsname
+#echo "time" >>$OUTpbsname
 echo "java -jar ~/biosoft/picard.jar MarkDuplicates I=$i O=$i.mdp.bam M=$i.M REMOVE_DUPLICATES=false" >>$OUTpbsname
-echo "Next run Bsub <$OUTpbsname"
+echo "bsub <$OUTpbsname"
 #echo $i
 done
