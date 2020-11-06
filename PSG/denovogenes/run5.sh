@@ -1,0 +1,1 @@
+cat Bnafr.new.orphan.gene.candidate Bnafr.denovo.dna.status|awk '{if(NF==2){a[$1]=$2}else{if(a[$1]+0>0){s=0;for(j=a[$1]+2;j<=6;j++){if($j>=0.2){s++}}if(s>=2){print $0,a[$1]}}}}' >Bnafr.new.denovo.gene.candidate
