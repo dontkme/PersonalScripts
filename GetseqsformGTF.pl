@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env perl
 
 #AUTHORS
-# Kaining Hu (c) 2018
-# Get Sequences from GFF with genome v1.1001 2018/09/12
+# Kaining Hu (c) 2021
+# Get Sequences from GTF with genome v1.0000 2021/03/29
 # hukaining@gmail.com
 
 use strict;
