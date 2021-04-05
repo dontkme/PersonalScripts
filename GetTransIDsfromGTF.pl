@@ -35,7 +35,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GFF annotation.default: exon]
     [-u int|upstream length Default: 5000]
     [-d int|downstream length Default: 5000]
-    [-i input list]
+    [-in input list]
 	 
     Note: Get Transid from GTF with genome v1.0000 2021/03/29.\n");
 
@@ -207,7 +207,7 @@ while(defined(our $inrow = <ANNOT>)){
             $gene_id = $1;
         }elsif($tmp3=~m/transcript_id \"(\S+)\"/i){
             $transcript_id = $1;            
-        }elsif($tmp3 =~ m/exon_number \"(\S+)\"/i){
+        }elsif($tmp3 =~ m/exon_number \"(\d+)\"/i){
             $exon_number = $1 + 0;
             # $exon_numberf3 = printf "%3.0f",$exon_number;
             $exon_numberf3 = sprintf "%03d",$exon_number;
