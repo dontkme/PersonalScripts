@@ -186,6 +186,7 @@ print "Feature: $feature\n";
     our $annotcount=0;
     our (%key2Chr,%key2type, %key2startpos, %key2endpos, %key2PM,%key2restwords,%key2line,%key2transid,%key2geneid,%key2exonid,%key2exonnumber,%SEexonid);
     our @codingtransid=();
+    our (%trans_exonnumbers,%key2length, %trans_CDSstart, %trans_CDSend, %trans_PM);
 
 
 
@@ -300,6 +301,27 @@ while(defined(our $inrow = <ANNOT>)){
             $key2exonnumber{$key} = $exon_number;   
             $key2exonid{$key} = $exon_id;   
 
+            $key2length{$key} = abs($seqendpos-$seqstartpos+1);
+            $trans_PM{$transcript_id} = $plusminus;
+
+            # if ($exon_number > $trans_exonnumbers{$transcript_id} or !defined($trans_exonnumbers{$transcript_id})){
+            if (!defined($trans_exonnumbers{$transcript_id}) or $exon_number > $trans_exonnumbers{$transcript_id}){
+                $trans_exonnumbers{$transcript_id} =$exon_number;
+            }
+
+            # if 
+                    if ($annottype eq "CDS"){
+                      
+                        if (!defined($trans_CDSstart{$transcript_id} ) or ($exon_number < $trans_CDSstart{$transcript_id}) ){
+                            $trans_CDSstart{$transcript_id} = $exon_number;
+                        }
+
+                       
+                        if ( !defined($trans_CDSend{$transcript_id}) or ($exon_number > $trans_CDSend{$transcript_id})){
+                            $trans_CDSend{$transcript_id} = $exon_number;
+                        }
+                    }
+
         }else{
             next;
         }
@@ -322,8 +344,10 @@ print "All done. Dealed with $annotcount annotations.\n";
 # };  
 
 our @sortkey = (sort keys %key2PM); # All-key array. @sortkey !!!
-our @codingtransidkkey = grep(/CDS/, @sortkey);
-print scalar(@codingtransidkkey)."\n";# 2021/04/06
+our @sortCDSkey = grep(/CDS/, @sortkey);
+print scalar(@sortCDSkey)." CDS annotations.\n";# 2021/04/06
+our @sortexonkey = grep(/exon/, @sortkey);
+print scalar(@sortexonkey)." exon annotations.\n";
 
 
 
@@ -545,6 +569,8 @@ open OUTSETRANSID, "> $opfn.outSEtransid.txt" or die ("[-] Error: Can't open or 
 open OUTUSTRANSID, "> $opfn.outUStransid.txt" or die ("[-] Error: Can't open or create $opfn.outUStransid.txt\n");
 open OUTDSTRANSID, "> $opfn.outDStransid.txt" or die ("[-] Error: Can't open or create $opfn.outDStransid.txt\n");
 open OUTUSDSTRANSID, "> $opfn.outUSDStransid.txt" or die ("[-] Error: Can't open or create $opfn.outUSDStransid.txt\n");
+open OUTUSSEDSTRANSID, "> $opfn.outUSSEDStransid.txt" or die ("[-] Error: Can't open or create $opfn.outUSSEDStransid.txt\n");
+
 
 # tie %key2transid, 'Tie::Hash::Regex';
 
@@ -568,9 +594,9 @@ while(defined(our $inputline = <INPUTLIST>)){
         my $USstartpos = $tmpUS[1]+1;
         my $DSstartpos = $tmpDS[1]+1;
         if ($tmpSE[3] eq ""){next;} #pass Null line.
-        my $SEpos="$tmpSE[0]\:$SEstartpos\\.\\.$tmpSE[2]:\\$tmpSE[3]";
-        my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]:\\$tmpUS[3]";
-        my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]:\\$tmpDS[3]";
+        my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";
+        my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]\:\\$tmpUS[3]";
+        my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]\:\\$tmpDS[3]";
 
         # my $SEposre="qr/$tmpSE[0]\:$SEstartpos\\.\\.$tmpSE[2]\\:$tmpSE[3]/";
         # my $USposre="qr/$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]:\\$tmpUS[3]/";
@@ -578,9 +604,9 @@ while(defined(our $inputline = <INPUTLIST>)){
 
         #  say $SEpos;
         #  say $SEposre;
-        # #  say $USpos;
+        #  say $USpos;
         # say $USposre;
-        # #  say $DSpos;
+        #  say $DSpos;
         # say $DSposre;
 
         our (@pos1, @pos2, @pos3, @pos1trans)= ((),(),()); 
@@ -630,7 +656,7 @@ while(defined(our $inputline = <INPUTLIST>)){
         foreach my $keypos3(@sortkey){
             if ($keypos3 =~ m/$SEpos/){
                 my $tmptransid = $key2transid{$keypos3};
-                  $SEexonid{$tmptransid} = $key2exonnumber{$keypos3};
+                #   $SEexonid{$tmptransid} = $key2exonnumber{$keypos3};
                  push(@pos3, $tmptransid);
             }
         }
@@ -647,6 +673,9 @@ while(defined(our $inputline = <INPUTLIST>)){
         # print "US_DS_intersect_transids: @USDStransid\n";
         my @noSEtransid = array_minus(@USDStransid,@pos3);
         # print "NoSEtransid_array_minus: @noSEtransid\n";
+        my @USSEDStransid = intersect(@USDStransid,@pos3);
+        my @SEnoUStransid = array_minus(@pos3,@pos1);
+        my @onlySEtransid = array_minus(@SEnoUStransid,@pos2);
         my @uniqueSEtransid = @pos3;
         # print "Unique_SE_transid: @uniqueSEtransid\n";
 
@@ -657,9 +686,16 @@ while(defined(our $inputline = <INPUTLIST>)){
         # say $SEPM;
         print OUTTRANSID "$inputline\t@uniqueSEtransid\t@pos1\t@pos2\t@USDStransid\t@noSEtransid\n";
         
-        foreach my $tmptransid(@uniqueSEtransid){
-            my $setransexonid = $SEexonid{$tmptransid};
-            print OUTSETRANSID "$inputline\t$tmptransid\t$setransexonid\n"
+        # foreach my $tmptransid(@uniqueSEtransid){
+        #     my $setransexonid = $SEexonid{$tmptransid};
+        #     print OUTSETRANSID "$inputline\t$tmptransid\t$setransexonid\n"
+        # }
+
+        foreach my $tmptransid(@onlySEtransid){
+            # my $setransexonid = $SEexonid{$tmptransid};
+            # print OUTSETRANSID "$inputline\t$tmptransid\t$setransexonid\n"
+            print OUTSETRANSID "$inputline\t$tmptransid\n"
+
         }
         
         foreach my $tmptransid(@pos1){
@@ -677,6 +713,103 @@ while(defined(our $inputline = <INPUTLIST>)){
             print OUTUSDSTRANSID "$inputline\t$tmptransid\n"
         }
 
+        #  foreach my $tmptransid(@USSEDStransid){
+            
+        #     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\n"
+        # }
+
+        ###################################################################
+        ##### Start analysis contain both of US, SE and US transcripts.
+
+        foreach my $tmptransid(@USSEDStransid){
+
+            our @tmpexonkeys=();
+            our @tmpCDSkeys=();
+            
+            foreach my $tmpexonkey(@sortexonkey){   #get exon keys
+                if ($tmpexonkey =~ m/$tmptransid/){
+                    push ( @tmpexonkeys, $tmpexonkey)
+                }
+            }
+
+            foreach my $tmpCDSkey(@sortCDSkey){
+                if ($tmpCDSkey =~ m/$tmptransid/){ #get CDS keys
+                    push (@tmpCDSkeys, $tmpCDSkey)
+                }
+            }
+            
+            ##Get start codon
+
+            my $startcodon_exonnumber = $trans_CDSstart{$tmptransid};
+            my $stopcodon_exonnumber = $trans_CDSend{$tmptransid};
+
+            our $setransexonid=0;
+
+            foreach my $SEkey(@tmpexonkeys){
+                # say $SEpos;
+                if ($SEkey=~m/$SEpos/){
+                    # say $SEkey;
+
+                    $setransexonid=$key2exonnumber{$SEkey};
+                    # say $setransexonid;
+
+                }
+            }
+
+            # my $setransexonid = $SEexonid{$tmptransid};
+            my $transexonnumbers = $trans_exonnumbers{$tmptransid};
+            my $transPM = $trans_PM{$tmptransid};
+
+            if ($transPM eq "+"){
+
+                if ($setransexonid < $startcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR\n";
+
+                }elsif($setransexonid > $startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){
+                
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon\n";
+
+                }elsif($setransexonid == $startcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_condon\n";
+
+                }elsif($setransexonid > $stopcodon_exonnumber){
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR\n";
+                }
+
+            }elsif($transPM eq "-"){
+
+
+                if ($setransexonid > $stopcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR\n";
+
+                }elsif($setransexonid>$startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){
+                
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon\n";
+
+
+                }elsif($setransexonid == $stopcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_condon\n";
+
+                }elsif($setransexonid < $startcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR\n";
+                }
+
+
+
+            }    
+
+
+
+            # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\n";
+
+
+        }
+
 
 }
 
@@ -686,6 +819,7 @@ close OUTSETRANSID;
 close OUTUSTRANSID;
 close OUTDSTRANSID;
 close OUTUSDSTRANSID;
+close OUTUSSEDSTRANSID;
 ######################################
 #End  main
 ######################################
