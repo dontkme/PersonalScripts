@@ -234,7 +234,7 @@ while(defined(our $inrow = <ANNOT>)){
     @tmp=();
 
     if ($inrow =~ m/^\#/) {next;}
-    if ($annotcount > 1 and $annotcount % 10000 == 0){
+    if ($annotcount > 1 and $annotcount % 100000 == 0){
         print "Deal with $annotcount annotations.\n";
     }
     
@@ -350,17 +350,43 @@ our @sortexonkey = grep(/exon/, @sortkey);
 print scalar(@sortexonkey)." exon annotations.\n";
 
 
+our (%CDSseqs, %exonseqs, %CDSstartPos, %CDSendPos, %exonstartPos, %exonendPos, %CDSsLength, %exonsLength);
 
 foreach my $sortkey(@sortkey){
     # say $sortkey;
     # if ($sortkey =~m/exon/i){
-    if ($sortkey =~m/$feature/i){
+    # if ($sortkey =~m/$feature/i){
+    if ($sortkey){
         my $finalseq="";
         my $seqchrid=$key2Chr{$sortkey};
         my $seqstartpos=$key2startpos{$sortkey};
         my $seqendpos=$key2endpos{$sortkey};
         my $PM=$key2PM{$sortkey};
         $finalseq = getseq($sortkey,$seqchrid,$seqstartpos,$seqendpos,$PM);
+
+        my $transid = $key2transid{$sortkey};  #make exon/CDS seq hash.
+        my $transtype = $key2type{$sortkey};
+        my $transexonno = $key2exonnumber{$sortkey};
+        my $transexonstartpos = $key2startpos{$sortkey};
+        my $transexonendpos = $key2endpos{$sortkey};
+        my $transexonLength = $key2length{$sortkey};
+
+        # my $exontypeseqhashname = "$transid.$transtype";
+        # our $$exontype{"$transid"}[$transexonno] = $finalseq;
+        if ($transtype eq "CDS"){
+            $CDSseqs{$transid}[$transexonno] = $finalseq;
+            $CDSstartPos{$transid}[$transexonno] = $transexonstartpos;
+            $CDSendPos{$transid}[$transexonno] = $transexonendpos;
+            $CDSsLength{$transid}[$transexonno] = $transexonLength;
+
+        } elsif ($transtype eq "exon"){
+            $exonseqs{$transid}[$transexonno] = $finalseq;
+            $exonstartPos{$transid}[$transexonno] = $transexonstartpos;
+            $exonendPos{$transid}[$transexonno] = $transexonendpos;
+            $exonsLength{$transid}[$transexonno] = $transexonLength;
+        } 
+
+
         print OUT ">$sortkey\n";
         print OUT "$finalseq\n";
     #  
@@ -766,16 +792,125 @@ while(defined(our $inputline = <INPUTLIST>)){
 
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR\n";
 
-                }elsif($setransexonid > $startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){
-                
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon\n";
+                }elsif($setransexonid > $startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ # inner exons start remove SE
+
+                    
+                    our $originexonseqs = "";
+
+                    for (our $x = 1; $x <= $transexonnumbers; $x++){
+                        # say $x;
+                        # say $exonseqs{$tmptransid}[$x];
+                         $originexonseqs .= $exonseqs{$tmptransid}[$x];
+
+                    }
+
+                    our $originexonseqsLen = length($originexonseqs);
+
+                    our $removeSEexonseqs="";
+
+                    for (our $y = 1; $y < $setransexonid; $y++){
+                        # say $y;
+                        # say $exonseqs{$tmptransid}[$y];
+                        $removeSEexonseqs .= $exonseqs{$tmptransid}[$y];
+                    }
+
+                    my $outSEseq = $exonseqs{$tmptransid}[$setransexonid];
+                    my $outSEseqlen = length($outSEseq);
+
+                    for (our $z = $setransexonid + 1 ; $z <= $transexonnumbers; $z++){
+                        # say $z;
+                        # say $exonseqs{$tmptransid}[$z];
+                        $removeSEexonseqs .= $exonseqs{$tmptransid}[$z];
+                    }
+
+                    my $removeSEexonseqsLen = length($removeSEexonseqs); 
+                    # Loaded exons.
+
+                    #Start load CDS + exons.
+
+                    our $originCDSseqs = "";
+
+                    for (our $x = $startcodon_exonnumber; $x <= $stopcodon_exonnumber; $x++){
+                        #  say $x;
+                        #  say $CDSseqs{$tmptransid}[$x];
+                          $originCDSseqs .= $CDSseqs{$tmptransid}[$x];
+
+                    }
+
+                    my $originCDSseqsLen = length($originCDSseqs);
+
+                    our $removeSECDSseqs = "";
+
+                    for (our $y = $startcodon_exonnumber; $y < $setransexonid; $y++){
+                        # say $y;
+                        # say $exonseqs{$tmptransid}[$y];
+                         $removeSECDSseqs .= $CDSseqs{$tmptransid}[$y];
+                    }
+
+                    my $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
+                    # my $outSEseqlen = length($outSEseq);
+
+                    for (our $z = $setransexonid + 1 ; $z <= $transexonnumbers; $z++){
+                        # say $z;
+                        # say $exonseqs{$tmptransid}[$z];
+                         $removeSECDSseqs .= $exonseqs{$tmptransid}[$z];
+                    }
+
+                    my $removeSECDSseqsLen = length($removeSECDSseqs); 
+
+                    my $originCDSseqsAA = seq2aa1st($originCDSseqs);
+                    my $removeSEexonseqsAA = seq2aa1st($removeSECDSseqs);
+
+                    my $originCDSseqsAALen = length($originCDSseqsAA);
+
+                    my @removeSEexonseqsAA_Pos=();
+
+
+                    while ($removeSEexonseqsAA =~ m/_/gc){
+
+                        my $tmppos = pos($removeSEexonseqsAA);
+                        push (@removeSEexonseqsAA_Pos,$tmppos);
+
+                    }
+
+                    my $removeSEexonseqsAA_1stPos = $removeSEexonseqsAA_Pos[0];
+                    my $removeSEexonseqsAA_allPos = join(', ', @removeSEexonseqsAA_Pos);
+
+                    $originCDSseqsAA .= "_"; #originAA add an Stop_codon.
+
+                    my @originCDSseqsAA_Pos=();
+
+                    while ($originCDSseqsAA =~ m/_/gc){
+
+                        my $tmppos = pos($originCDSseqsAA);
+                        push (@originCDSseqsAA_Pos,$tmppos);
+
+                    }
+
+                    my $originCDS_1stPos = $originCDSseqsAA_Pos[0];
+                    my $originCDS_allPos_allPos = join(', ', @originCDSseqsAA_Pos);
+
+
+
+
+
+                    
+
+
+                    #End loaded CDS + exons.
+                    
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon";
+                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
+                    print OUTUSSEDSTRANSID "\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
 
                 }elsif($setransexonid == $startcodon_exonnumber){
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_condon\n";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon\n";
 
                 }elsif($setransexonid > $stopcodon_exonnumber){
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR\n";
+                }elsif($setransexonid == $stopcodon_exonnumber){
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstop_codon\n";
                 }
 
             }elsif($transPM eq "-"){
@@ -792,11 +927,14 @@ while(defined(our $inputline = <INPUTLIST>)){
 
                 }elsif($setransexonid == $stopcodon_exonnumber){
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_condon\n";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon\n";
 
                 }elsif($setransexonid < $startcodon_exonnumber){
 
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR\n";
+                }elsif($setransexonid == $startcodon_exonnumber){
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstop_codon\n";
                 }
 
 
