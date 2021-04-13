@@ -21,25 +21,24 @@ use List::MoreUtils ':all';
 
 our $opfn="getseqsOut";
 my $verbose;
-our $upstreml=5000;
-our $downstreml=5000;
-our $annot="";
-our $sortID="gene_id";
-our $feature="exon";
+# our $upstreml=5000;
+# our $downstreml=5000;
+our $annot = "";
+our $sortID = "gene_id";
+our $feature = "";
 our $inputlist;
+our $dj = 50;
 
 #GetOptions("i=s"=>\$seqfilename,"o=s" => \$opfn,"verbose"=>\$verbose)
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
-GetOptions("o=s" => \$opfn, "u=i"=>\$upstreml,"d=i"=>\$downstreml, "g=s"=>\$annot,"f=s"=>\$feature,"s=s"=>\$sortID, "input|in=s"=>\$inputlist,"verbose"  => \$verbose)
+GetOptions("o=s" => \$opfn, "d=i"=>\$dj, "g=s"=>\$annot,"f=s"=>\$feature,"s=s"=>\$sortID, "input|in=s"=>\$inputlist,"verbose"  => \$verbose)
 or die("[-]Error in command line arguments
-  Usage: perl GetTransIDsfromGTF [options] <-g string|GTF annoation file> <-in string|input rMATs type list|> <input FASTA file(s)>
+  Usage: perl GetTransIDsfromGTF [options] -g <string|GTF annoation file> -in <string|input rMATs type list> <input FASTA file(s)>
     options:
     [-o string|outprefix Default: getseqsOut]
     [-s string|Specify attribute type in GFF annotation for sorting. default: gene_id]
-    [-f string|Specify feature type in GFF annotation.default: exon]
-    [-u int|upstream length Default: 5000]
-    [-d int|downstream length Default: 5000]
-    
+    [-f string|Specify feature type in GFF annotation.default: '']
+       
 	 
     Note: Get Transid from GTF with genome v1.0000 2021/03/29.\n");
 
@@ -876,6 +875,13 @@ while(defined(our $inputline = <INPUTLIST>)){
                     my $removeSEexonseqsAA_1stPos = $removeSEexonseqsAA_Pos[0];
                     my $removeSEexonseqsAA_allPos = join(', ', @removeSEexonseqsAA_Pos);
 
+                    if (!defined($removeSEexonseqsAA_1stPos)){
+                        $removeSEexonseqsAA_1stPos= "Null";
+                        $removeSEexonseqsAA_allPos = "Null";
+
+                    }                    
+
+                    
                     $originCDSseqsAA .= "_"; #originAA add an Stop_codon.
 
                     my @originCDSseqsAA_Pos=();
@@ -888,11 +894,32 @@ while(defined(our $inputline = <INPUTLIST>)){
                     }
 
                     my $originCDS_1stPos = $originCDSseqsAA_Pos[0];
+                    
                     my $originCDS_allPos_allPos = join(', ', @originCDSseqsAA_Pos);
 
+                    my $flag1 = "";
 
+                    if($removeSEexonseqsAA_1stPos eq "Null"){
+                        
+                        $flag1 = "No stop_codon";
 
+                    }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
 
+                        $flag1 = "Need check";
+                    
+                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
+
+                        $flag1 = "Same stop_codon";
+
+                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
+
+                        $flag1 = "Downstream stop_codon";
+                        
+                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
+
+                        $flag1 = "Upstream stop_codon";
+
+                    }
 
                     
 
@@ -901,7 +928,8 @@ while(defined(our $inputline = <INPUTLIST>)){
                     
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
-                    print OUTUSSEDSTRANSID "\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
+                    print OUTUSSEDSTRANSID "\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
+                    print OUTUSSEDSTRANSID "\t$flag1\n";
 
                 }elsif($setransexonid == $startcodon_exonnumber){
 
