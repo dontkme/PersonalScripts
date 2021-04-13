@@ -349,13 +349,13 @@ our @sortexonkey = grep(/exon/, @sortkey);
 print scalar(@sortexonkey)." exon annotations.\n";
 
 
-our (%CDSseqs, %exonseqs, %CDSstartPos, %CDSendPos, %exonstartPos, %exonendPos, %CDSsLength, %exonsLength);
+our (%CDSseqs, %exonseqs, %CDSstartPos, %CDSendPos, %exonstartPos, %exonendPos, %CDSsLength, %exonsLength, %accCDSlength, %reverseaccCDSlength);
 
 foreach my $sortkey(@sortkey){
     # say $sortkey;
     # if ($sortkey =~m/exon/i){
     # if ($sortkey =~m/$feature/i){
-    if ($sortkey){
+    if ($sortkey =~ m/CDS|exon/){
         my $finalseq="";
         my $seqchrid=$key2Chr{$sortkey};
         my $seqstartpos=$key2startpos{$sortkey};
@@ -401,8 +401,8 @@ foreach my $sortkey(@sortkey){
 
 close OUT;
 
-######################## condon2aa #######################
-
+######################## condon2aa ############################
+#
 my(%genetic_code) = (
    
     'TCA' => 'S',    # Serine
@@ -523,8 +523,8 @@ sub seq2aa3rd {
     }
      return $protein3;
 }
-
-####################### codon2aa 
+#
+####################### codon2aa ###############################
 
 
 
@@ -791,7 +791,7 @@ while(defined(our $inputline = <INPUTLIST>)){
 
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR\n";
 
-                }elsif($setransexonid > $startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ # inner exons start remove SE
+                }elsif($setransexonid > $startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ ######### inner exons start remove SE
 
                     
                     our $originexonseqs = "";
@@ -844,6 +844,7 @@ while(defined(our $inputline = <INPUTLIST>)){
                         # say $y;
                         # say $exonseqs{$tmptransid}[$y];
                          $removeSECDSseqs .= $CDSseqs{$tmptransid}[$y];
+                         $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
                     }
 
                     my $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
@@ -853,6 +854,7 @@ while(defined(our $inputline = <INPUTLIST>)){
                         # say $z;
                         # say $exonseqs{$tmptransid}[$z];
                          $removeSECDSseqs .= $exonseqs{$tmptransid}[$z];
+                         $accCDSlength{$tmptransid}[$z] = length($removeSECDSseqs);
                     }
 
                     my $removeSECDSseqsLen = length($removeSECDSseqs); 
@@ -921,6 +923,57 @@ while(defined(our $inputline = <INPUTLIST>)){
 
                     }
 
+                    our $final_1st_stopcodon_exon_number = "-"; ######## start tell NMD.
+                    our $final_1ststopcodon_accCDSlen = "-";
+                    our $flag3 = "-";
+                    our $NewstopcodonPos= "-";
+                    our $tmpdj = "-";
+                    our $final_1st_stopcodon_exon_number_len = "-";
+
+                    if ($flag1 eq "Upstream stop_codon"){
+
+                         $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ;
+                        
+
+                        for (my $a = $startcodon_exonnumber; $a <= $transexonnumbers; $a++){
+                            my $tmplen; 
+                            if ($a == $setransexonid){
+                                next;
+                            } 
+
+                            if ($a == $startcodon_exonnumber){
+                                $tmplen = $CDSsLength{$tmptransid}[$a];
+                            }else{
+                                $tmplen = $exonsLength{$tmptransid}[$a];
+                            }
+
+                            if (($NewstopcodonPos >= $accCDSlength{$tmptransid}[$a] - $tmplen) and ($NewstopcodonPos <= $accCDSlength{$tmptransid}[$a])){ # search 1st stopcodon length range.
+
+                                $final_1st_stopcodon_exon_number_len = $tmplen;
+                                $final_1st_stopcodon_exon_number = $a;
+                                $tmpdj = $accCDSlength{$tmptransid}[$a] - $NewstopcodonPos;
+                                $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$a];
+
+                                if ($final_1st_stopcodon_exon_number == $transexonnumbers){
+                                    $flag3 = "Last exon";
+                                } elsif($tmpdj>= $dj){
+
+                                    $flag3 = "NMD";  ############### NMD dj <= 50 rules.
+
+
+                                }
+
+                            }
+                        }
+
+
+                    }elsif ($flag1 eq "Downstream stop_codon"){
+
+                        $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ;
+
+
+                    }
+
                     
 
 
@@ -929,7 +982,7 @@ while(defined(our $inputline = <INPUTLIST>)){
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     print OUTUSSEDSTRANSID "\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
-                    print OUTUSSEDSTRANSID "\t$flag1\n";
+                    print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\n";
 
                 }elsif($setransexonid == $startcodon_exonnumber){
 
