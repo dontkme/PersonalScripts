@@ -195,20 +195,15 @@ while(defined (our $inrow=<ANNOT>)){
 
     if($tmp[2] eq "CDS"){
         # say $inrow;
-
         if ($inrow =~ m/transcript_id \"(\S+)\"/i){
-
             # say $inrow;
             # say $1;
-
             push (@codingtransid, $1);
-
         }
 
-        } else {
-
-        next;
-    }
+    } #else {
+    #     next;
+    # }
 
 
 }
@@ -363,7 +358,7 @@ foreach my $sortkey(@sortkey){
         my $PM=$key2PM{$sortkey};
         $finalseq = getseq($sortkey,$seqchrid,$seqstartpos,$seqendpos,$PM);
 
-        my $transid = $key2transid{$sortkey};  #make exon/CDS seq hash.
+        my $transid = $key2transid{$sortkey};  #make exon/CDS seq, length hash, and exon start/end pos hash.
         my $transtype = $key2type{$sortkey};
         my $transexonno = $key2exonnumber{$sortkey};
         my $transexonstartpos = $key2startpos{$sortkey};
@@ -615,13 +610,19 @@ while(defined(our $inputline = <INPUTLIST>)){
     my @tmpUS =split (/\:/,$tmp2[1]);
     my @tmpDS =split (/\:/,$tmp2[2]);
     # my ($SEchr, $SEstartpos, $SEendpos, $SEPM) = split (/\:/,$tmp2[0]);
+    my $SEchr = $tmpSE[0];
     my $SEstartpos = $tmpSE[1]+1;
+    my $SEendpos = $tmpSE[2];
+    my $SEPM =$tmpSE[3];
     my $USstartpos = $tmpUS[1]+1;
+    my $USendpos = $tmpUS[2];
     my $DSstartpos = $tmpDS[1]+1;
+    my $DSendpos = $tmpDS[2];
     if ($tmpSE[3] eq ""){next;} #pass Null line.
-    my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";
+    my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";   ### Pos to match keys. 
     my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]\:\\$tmpUS[3]";
     my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]\:\\$tmpDS[3]";
+    my $SEseq = getseq("$genename.SE",$SEchr, $SEstartpos+1, $SEendpos, $SEPM);  #### Get SEseq.
 
     # my $SEposre="qr/$tmpSE[0]\:$SEstartpos\\.\\.$tmpSE[2]\\:$tmpSE[3]/";
     # my $USposre="qr/$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]:\\$tmpUS[3]/";
@@ -682,7 +683,7 @@ while(defined(our $inputline = <INPUTLIST>)){
 
     my @USDStransid = intersect(@pos1,@pos2);
     # print "US_DS_intersect_transids: @USDStransid\n";
-    my @noSEtransid = array_minus(@USDStransid,@pos3);
+    my @noSEtransid = array_minus(@USDStransid,@pos3);    ##### Get only US DS transcript, which don't have the SE. Need to add the SE to analysis.
     # print "NoSEtransid_array_minus: @noSEtransid\n";
     my @USSEDStransid = intersect(@USDStransid,@pos3);
     my @SEnoUStransid = array_minus(@pos3,@pos1);
@@ -714,9 +715,9 @@ while(defined(our $inputline = <INPUTLIST>)){
         print OUTDSTRANSID "$inputline\t$tmptransid\n"
     }
 
-    foreach my $tmptransid(@noSEtransid){   
-        print OUTUSDSTRANSID "$inputline\t$tmptransid\n"
-    }
+    # foreach my $tmptransid(@noSEtransid){   
+    #     print OUTUSDSTRANSID "$inputline\t$tmptransid\n"  ####################### MOVE below to run. ############# Line 1312
+    # }
 
     #  foreach my $tmptransid(@USSEDStransid){
         
@@ -1297,16 +1298,131 @@ while(defined(our $inputline = <INPUTLIST>)){
                 print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstop_codon\n";
             }
 
-
-
         }    
-
-
-
         # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\n";
-
+        
 
     }
+
+    ############### Start Add SE between US and DS.
+    foreach my $tmptransid(@noSEtransid){   
+        our @tmpexonkeys=();
+        our @tmpCDSkeys=();
+        
+        foreach my $tmpexonkey(@sortexonkey){   #get this transcripts exon keys @tmpexonkeys.
+            if ($tmpexonkey =~ m/$tmptransid/){
+                push ( @tmpexonkeys, $tmpexonkey)
+            }
+        }
+
+        foreach my $tmpCDSkey(@sortCDSkey){
+            if ($tmpCDSkey =~ m/$tmptransid/){ #get this transcript CDS keys @tmpCDSkeys
+                push (@tmpCDSkeys, $tmpCDSkey)
+            }
+        }
+        
+        ##Get start codon
+        my $startcodon_exonnumber = $trans_CDSstart{$tmptransid};
+        my $stopcodon_exonnumber = $trans_CDSend{$tmptransid};
+
+        my $transexonnumbers = $trans_exonnumbers{$tmptransid}; # Transcript total exon numbers. !!! Important 
+        my $transPM = $trans_PM{$tmptransid};                   ## Transcripts' PM.
+
+        our $SEtransexonumber = 0;
+        our $UStransexonnumber = 0;
+        our $DStransexonnumber = 0;
+        # $SEseq
+        # Get US and US exon number.
+        foreach my $exonkey(@tmpexonkeys){  #search this transcript's exon keys.
+            # say $SEpos;
+            if ($exonkey =~ m/$USpos/){
+                # say $SEkey;
+                # $setransexonid=$key2exonnumber{$SEkey};
+                $UStransexonnumber = $key2exonnumber{$exonkey};
+                # say $setransexonid;
+
+            }elsif($exonkey =~/$DSpos/){
+                $DStransexonnumber = $key2exonnumber{$exonkey};
+            }
+
+        }
+        my $innerExonsofUSandDS = $DStransexonnumber - $UStransexonnumber -1;
+
+
+        if ($innerExonsofUSandDS == 0){
+            $SEtransexonumber = ($UStransexonnumber + $DStransexonnumber)/2;
+        }elsif($innerExonsofUSandDS > 0){
+            # my $USexonendpos = $exonendPos{$tmptransid}[$UStransexonnumber];
+            # my $DSexonstartpos = $exonendPos{$tmptransid}[$DStransexonnumber];
+
+            for(my $tmpexonnumber = $UStransexonnumber +1; $tmpexonnumber <= $DStransexonnumber; $tmpexonnumber++){
+                my $tmpexonsatrtpos = $exonstartPos{$tmptransid}[$tmpexonnumber];
+                my $tmpexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber];
+                my $tmpbeforeexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber - 1];
+                if(($SEstartpos > $tmpbeforeexonendpos ) and ($SEendpos < $tmpexonsatrtpos)){
+                    $SEtransexonumber = $tmpexonnumber - 0.5;
+                }
+
+            }
+        }
+
+        my $flag1="-";
+
+        #First analysis Plus strain.
+        if ($transPM eq "+"){
+
+            if ($startcodon_exonnumber > $UStransexonnumber){
+                $flag1 = "5UTR";
+                print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                print OUTUSDSTRANSID "\t$flag1\n";
+                next;
+
+            }else{
+
+                if ($stopcodon_exonnumber == $UStransexonnumber){
+                    $flag1 = "stop_codon";
+                }elsif($stopcodon_exonnumber < $UStransexonnumber){
+                    $flag1 = "3UTR";
+
+                }elsif($UStransexonnumber >= $startcodon_exonnumber and $UStransexonnumber <= $stopcodon_exonnumber){
+                    $flag1 = "Start or inner exons";
+                }
+
+                print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                print OUTUSDSTRANSID "\t$flag1\n";
+            }
+
+
+
+        }elsif($transPM eq "-"){
+
+            if ($stopcodon_exonnumber < $DStransexonnumber){
+                $flag1 = "5UTR";
+                print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                print OUTUSDSTRANSID "\t$flag1\n";
+                next;
+
+            }else{
+
+                if ($startcodon_exonnumber == $UStransexonnumber){
+                    $flag1 = "stop_codon";
+                }elsif($stopcodon_exonnumber < $UStransexonnumber){
+                    $flag1 = "3UTR";
+
+                # }elsif(){
+
+                }
+
+                print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                print OUTUSDSTRANSID "\t$flag1\n";
+            }
+        }
+
+
+        # print OUTUSDSTRANSID "$inputline\t$tmptransid\n" 
+        
+    }
+
 
 
 }
