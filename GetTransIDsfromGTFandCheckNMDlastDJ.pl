@@ -622,7 +622,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
     my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";   ### Pos to match keys. 
     my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]\:\\$tmpUS[3]";
     my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]\:\\$tmpDS[3]";
-    my $SEseq = getseq("$genename.SE",$SEchr, $SEstartpos+1, $SEendpos, $SEPM);  #### Get SEseq.
+    my $SEseq = getseq("$genename.SE",$SEchr, $SEstartpos, $SEendpos, $SEPM);  #### Get SEseq. 2021.04.19 bug fix. $SEstartpos +1. remove +1
 
     # my $SEposre="qr/$tmpSE[0]\:$SEstartpos\\.\\.$tmpSE[2]\\:$tmpSE[3]/";
     # my $USposre="qr/$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]:\\$tmpUS[3]/";
@@ -1251,7 +1251,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                         $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$as];
 
                         if ($final_1st_stopcodon_exon_number == $transexonnumbers){
-                            $flag3 = "Last exon";                     
+                            $flag3 = "Last_exon";                     
                         }elsif($tmpdj>= $dj){
                             $flag3 = "NMD";  ############### NMD dj <= 50 rules.
                         }
@@ -1325,7 +1325,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
         my $startcodon_exonnumber = $trans_CDSstart{$tmptransid};
         my $stopcodon_exonnumber = $trans_CDSend{$tmptransid};
 
-        my $transexonnumbers = $trans_exonnumbers{$tmptransid}; # Transcript total exon numbers. !!! Important 
+        my $transexonnumbers = $trans_exonnumbers{$tmptransid}; # Transcript's total exon numbers. !!! Important 
         my $transPM = $trans_PM{$tmptransid};                   ## Transcripts' PM.
 
         our $SEtransexonumber = 0;
@@ -1370,7 +1370,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                     next;
                 }
 
-                if(($SEstartpos >= $tmpexonsatrtpos and $SEstartpos <= $tmpexonendpos) or ($SEendpos >= $tmpexonsatrtpos and $SEendpos <= $tmpexonendpos)){
+                if(($SEstartpos >= $tmpexonsatrtpos and $SEstartpos <= $tmpexonendpos) or ($SEendpos >= $tmpexonsatrtpos and $SEendpos <= $tmpexonendpos) or ($SEstartpos <= $tmpexonsatrtpos and $SEendpos >= $tmpexonendpos)){
                     $SEtransexonumber = "$tmpexonnumber";
                     # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
                     # # print OUTUSDSTRANSID "\t$flag1\n";
@@ -1400,7 +1400,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                 # }
 
                 if ($stopcodon_exonnumber == $UStransexonnumber){
-                    $flag1 = "stop_codon";
+                    $flag1 = "Stop_codon";
                 }elsif($stopcodon_exonnumber < $UStransexonnumber){
                     $flag1 = "3UTR";
 
@@ -1541,7 +1541,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                 my $originCDSseqsAA_allPos = join(', ', @originCDSseqsAA_Pos);
 
 
-                my $flag2 ="";
+                my $flag2 ="-";
                 if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
                     $flag2 = "Same stop codon";
                 }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
@@ -1550,15 +1550,36 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                     $flag2 = "Upstream stop_codon";
                 }
 
-                my $lastdjpos = "";
+                my $lastJpos = "-";
+                my $flagnmd = "-";
+                my $lastdj= "-";
+                my $lastexonlen = $exonsLength{$tmptransid}[$transexonnumbers];
+                my $totallenofAddCDSlen = $tmpaccAddCDSlen{$transexonnumbers};
+                my $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
+                
 
-                # if ($t)
+                if ($SEtransexonumber == $transexonnumbers - 1 or $SEtransexonumber == $transexonnumbers - 0.5){
+                    $lastJpos = $tmpaccAddCDSlen{$SEtransexonumber};
+                }else{
+                    $lastJpos = $tmpaccAddCDSlen{$transexonnumbers-1};
+                }
+
+                $lastdj = $lastJpos - $addedSEDNA1stPos ; # Caculate the lastdj.
+
+                if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
+                    $flagnmd = "Last_exon";
+
+                }elsif($lastdj > $dj){
+                    $flagnmd ="NMD";
+                }
+
+                
                 
 
                 print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
                 print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t$originFullCDSlen\t$originCDSlen\t$addSECDSlen\t$SEseq\t$originFullCDS\t$tmpOriginCDS\t$tmpAddCDS";
                 print OUTUSDSTRANSID "\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
-                print OUTUSDSTRANSID "\t$flag2\n";
+                print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\n";
             }
 
 
@@ -1573,13 +1594,12 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
             }else{
 
-                if ($startcodon_exonnumber == $UStransexonnumber){
-                    $flag1 = "stop_codon";
-                }elsif($stopcodon_exonnumber < $UStransexonnumber){
+                if ($startcodon_exonnumber == $DStransexonnumber){
+                    $flag1 = "Stop_codon";
+                }elsif($stopcodon_exonnumber > $DStransexonnumber){
                     $flag1 = "3UTR";
-
-                # }elsif(){
-
+                }elsif($DStransexonnumber > $startcodon_exonnumber and $DStransexonnumber <= $stopcodon_exonnumber){
+                    $flag1 = "Start or inner exons";
                 }
 
                 print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
