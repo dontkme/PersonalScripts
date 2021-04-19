@@ -595,7 +595,7 @@ open OUTUSSEDSTRANSID, "> $opfn.outUSSEDStransid.txt" or die ("[-] Error: Can't 
 # tie %key2transid, 'Tie::Hash::Regex';
 
 
-while(defined(our $inputline = <INPUTLIST>)){
+LINE: while(defined(our $inputline = <INPUTLIST>)){
     if ($inputline =~ m/^\#/) {next;}
     # if ($inputline > 1 and $annotcount % 1000 == 0){
     #         print "Dealed with $annotcount annotations.\n";
@@ -1355,13 +1355,29 @@ while(defined(our $inputline = <INPUTLIST>)){
             # my $USexonendpos = $exonendPos{$tmptransid}[$UStransexonnumber];
             # my $DSexonstartpos = $exonendPos{$tmptransid}[$DStransexonnumber];
 
-            for(my $tmpexonnumber = $UStransexonnumber +1; $tmpexonnumber <= $DStransexonnumber; $tmpexonnumber++){
+            for(my $tmpexonnumber = $UStransexonnumber; $tmpexonnumber < $DStransexonnumber; $tmpexonnumber++){
                 my $tmpexonsatrtpos = $exonstartPos{$tmptransid}[$tmpexonnumber];
                 my $tmpexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber];
-                my $tmpbeforeexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber - 1];
-                if(($SEstartpos > $tmpbeforeexonendpos ) and ($SEendpos < $tmpexonsatrtpos)){
-                    $SEtransexonumber = $tmpexonnumber - 0.5;
+                # my $tmpbeforeexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber - 1];
+                my $tmpnextExonstartpos = $exonstartPos{$tmptransid}[$tmpexonnumber+1];
+
+                # if(($SEstartpos > $tmpbeforeexonendpos ) and ($SEendpos < $tmpexonsatrtpos)){
+                #     $SEtransexonumber = $tmpexonnumber - 0.5;
+                # }
+
+                if($SEstartpos > $tmpexonendpos and $SEendpos < $tmpnextExonstartpos){
+                    $SEtransexonumber = $tmpexonnumber + 0.5;
+                    next;
                 }
+
+                if(($SEstartpos >= $tmpexonsatrtpos and $SEstartpos <= $tmpexonendpos) or ($SEendpos >= $tmpexonsatrtpos and $SEendpos <= $tmpexonendpos)){
+                    $SEtransexonumber = "$tmpexonnumber";
+                    # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                    # # print OUTUSDSTRANSID "\t$flag1\n";
+                    # print OUTUSDSTRANSID "\n";
+                    #  last;
+                } 
+                
 
             }
         }
@@ -1379,6 +1395,10 @@ while(defined(our $inputline = <INPUTLIST>)){
 
             }else{
 
+                # if ($SEtransexonumber % 1 != 0){
+                #     last LINE; ####### next;
+                # }
+
                 if ($stopcodon_exonnumber == $UStransexonnumber){
                     $flag1 = "stop_codon";
                 }elsif($stopcodon_exonnumber < $UStransexonnumber){
@@ -1388,8 +1408,157 @@ while(defined(our $inputline = <INPUTLIST>)){
                     $flag1 = "Start or inner exons";
                 }
 
+                ##### ADD SE sequence. start CDS + rest exons.
+                my %tmpaccOriginCDSlen;
+                my %tmpaccAddCDSlen;
+                my $tmpOriginCDS="";
+                my $tmpAddCDS="";
+                my %tmpexonlen;
+
+                for (my $tmpi = $startcodon_exonnumber; $tmpi < $SEtransexonumber; $tmpi++){
+                    my $tmpseq="";
+                    if ($tmpi == $startcodon_exonnumber){
+                        $tmpseq = $CDSseqs{$tmptransid}[$tmpi];
+                    }else{
+                        $tmpseq = $exonseqs{$tmptransid}[$tmpi];
+                    }
+
+                    $tmpOriginCDS .=$tmpseq;
+                    $tmpAddCDS .= $tmpseq;
+                    $tmpaccOriginCDSlen{$tmpi} = length($tmpOriginCDS);
+                    $tmpaccAddCDSlen{$tmpi} = length($tmpAddCDS); 
+                    $tmpexonlen{$tmpi} = length($tmpseq);
+
+                }
+
+                $tmpAddCDS .= $SEseq; ### Add SE in the middle.
+                $tmpaccAddCDSlen{$SEtransexonumber} = length($tmpAddCDS); 
+                $tmpexonlen{$SEtransexonumber} = length($SEseq);
+
+                # my $point = $SEtransexonumber % 1;
+                # my $point = $SEtransexonumber - int($SEtransexonumber);
+                # say $point;
+                if($SEtransexonumber - int($SEtransexonumber)== 0.5){ 
+
+                    for (my $tmpj = $SEtransexonumber + 0.5; $tmpj <= $transexonnumbers; $tmpj++ ){ ### Add rest exons.
+                        my $tmpseq="";
+                        $tmpseq = $exonseqs{$tmptransid}[$tmpj];
+                        $tmpOriginCDS .=$tmpseq;
+                        $tmpAddCDS .= $tmpseq;
+                        $tmpaccOriginCDSlen{$tmpj} = length($tmpOriginCDS);
+                        $tmpaccAddCDSlen{$tmpj} = length($tmpAddCDS); 
+                        $tmpexonlen{$tmpj} = length($tmpseq);
+
+                    }
+                }else{
+
+                    for (my $tmpj = $SEtransexonumber + 1; $tmpj <= $transexonnumbers; $tmpj++ ){ ### Add rest exons.
+                        my $tmpseq="";
+                        $tmpseq = $exonseqs{$tmptransid}[$tmpj];
+                        $tmpOriginCDS .=$tmpseq;
+                        $tmpAddCDS .= $tmpseq;
+                        $tmpaccOriginCDSlen{$tmpj} = length($tmpOriginCDS);
+                        $tmpaccAddCDSlen{$tmpj} = length($tmpAddCDS); 
+                        $tmpexonlen{$tmpj} = length($tmpseq);
+                    }
+                }
+
+                my $originFullCDS="";
+                my $originFullCDSlen="";
+                for (my $tmpk =$startcodon_exonnumber; $tmpk <= $stopcodon_exonnumber; $tmpk ++){
+                    $originFullCDS .= $CDSseqs{$tmptransid}[$tmpk];
+
+                }
+                $originFullCDSlen = length($originFullCDS);
+
+                my $addedSEseqlen = length($SEseq);
+                my $originCDSlen = $tmpaccOriginCDSlen{$transexonnumbers};
+                my $addSECDSlen = $tmpaccAddCDSlen{$transexonnumbers};
+
+                ########### Finished of loading DNA sequences.
+
+                my $originCDSseqsAA = seq2aa1st($tmpOriginCDS);   ### Translate 2 AA.
+                my $AddSEexonseqsAA = seq2aa1st($tmpAddCDS);
+                my $originFullCDSAA = seq2aa1st($originFullCDS);
+
+                # my $ATGtest= substr($originCDSseqs,0,3);
+                # say $ATGtest;
+                my $flagATG = "ATG";
+                if (substr($originFullCDS,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
+                    # next;
+                    $flagATG = substr($originFullCDS,0,3);
+                }
+
+                my $originFullCDSAA_Len = length($originFullCDSAA);
+
+                my @AddSEexonseqsAA_stopPos=();
+
+
+                while ($AddSEexonseqsAA =~ m/_/gc){  #### Get SE-removed AA stop_codons as an array. 
+
+                    my $tmppos = pos($AddSEexonseqsAA);
+                    push (@AddSEexonseqsAA_stopPos,$tmppos);
+
+                }
+
+                my $AddSEexonseqsAA_1stPos = $AddSEexonseqsAA_stopPos[0];
+                my $AddSEexonseqsAA_allPos = join(', ', @AddSEexonseqsAA_stopPos);
+
+                if (!defined($AddSEexonseqsAA_1stPos)){
+                    $AddSEexonseqsAA_1stPos= "Null";
+                    $AddSEexonseqsAA_allPos = "Null";
+
+                }                    
+
+                #### Full length CDS
+                $originFullCDSAA .= "_"; #originAA add an Stop_codon.
+
+                my @originFullCDSAA_Pos=();
+
+                while ($originFullCDSAA =~ m/_/gc){ # Original AA stop_codon array.
+
+                    my $tmppos = pos($originFullCDSAA);
+                    push (@originFullCDSAA_Pos,$tmppos);
+
+                }
+
+                my $originFullCDSAA_1stPos = $originFullCDSAA_Pos[0];
+                
+                my $originFullCDSAA_allPos = join(', ', @originFullCDSAA_Pos);
+
+                ##### CDS + exons
+                my @originCDSseqsAA_Pos=();  ## Original CDS and exons stop codon.
+
+                while ($originCDSseqsAA =~ m/_/gc){ # Original AA stop_codon array.
+
+                    my $tmppos = pos($originCDSseqsAA);
+                    push (@originCDSseqsAA_Pos,$tmppos);
+
+                }
+
+                my $originCDSseqsAA_1stPos = $originCDSseqsAA_Pos[0];
+                
+                my $originCDSseqsAA_allPos = join(', ', @originCDSseqsAA_Pos);
+
+
+                my $flag2 ="";
+                if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
+                    $flag2 = "Same stop codon";
+                }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
+                    $flag2 = "Downstream stop_codon";
+                }elsif($AddSEexonseqsAA_1stPos < $originFullCDSAA_1stPos){
+                    $flag2 = "Upstream stop_codon";
+                }
+
+                my $lastdjpos = "";
+
+                # if ($t)
+                
+
                 print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
-                print OUTUSDSTRANSID "\t$flag1\n";
+                print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t$originFullCDSlen\t$originCDSlen\t$addSECDSlen\t$SEseq\t$originFullCDS\t$tmpOriginCDS\t$tmpAddCDS";
+                print OUTUSDSTRANSID "\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
+                print OUTUSDSTRANSID "\t$flag2\n";
             }
 
 
