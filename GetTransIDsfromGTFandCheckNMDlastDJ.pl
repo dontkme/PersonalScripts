@@ -727,7 +727,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
     ###################################################################
     ##### Start analysis contain both of US, SE and US transcripts.
 
-    foreach my $tmptransid(@USSEDStransid){
+    foreach my $tmptransid(@USSEDStransid){   ##### 1st For. !!!!!
 
         our @tmpexonkeys=();
         our @tmpCDSkeys=();
@@ -768,7 +768,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
         ###################### Start analysis
 
-        if ($transPM eq "+"){   ########## First analysis Plus strain.
+        if ($transPM eq "+"){   ########## First analysis Plus strand.
 
             our $originexonseqs = "";
             our $removeSEexonseqs = ""; # initialize removed SE exons.
@@ -989,9 +989,151 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                 print OUTUSSEDSTRANSID "\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
                 print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\n";
 
-            }elsif($setransexonid == $startcodon_exonnumber){
+            }elsif($setransexonid == $startcodon_exonnumber){ ########## SE had Start_Codon codition. Remove SE and predict longest ORF!!! 2021-04-21 ######
+                my $removeSEexonsseq = "";
+                my $OriginExonsseq = "";
+                my $OriginCDSsseq = "";
 
-                print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon\n";
+                my @tmpAccrmSEExons = ();
+                our @tmpAccOriginExons =();
+                my $tmpSEseq = $exonseqs{$tmptransid}[$setransexonid];
+                my $tmpSElen = length($tmpSEseq);
+
+                for (my $ii = 1; $ii < $transexonnumbers; $ii++){
+
+                    if($ii == $setransexonid){
+                        $OriginExonsseq .= $exonseqs{$tmptransid}[$ii];
+
+                    }else{
+                        $OriginExonsseq .= $exonseqs{$tmptransid}[$ii];
+
+                        $removeSEexonsseq .= $exonseqs{$tmptransid}[$ii];
+
+                    }
+
+                    $tmpAccrmSEExons[$ii] = length($removeSEexonsseq);
+                    $tmpAccOriginExons[$ii] = length($OriginExonsseq);
+
+                }
+
+              
+                for (my $jj = $startcodon_exonnumber + 1; $jj <= $stopcodon_exonnumber; $jj++){
+                        $OriginCDSsseq .= $CDSseqs{$tmptransid}[$jj];
+                        # $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
+                }
+
+                my $OriginExonsseqLen = length($OriginExonsseq);
+                my $removeSEexonsseqLen = length($removeSEexonsseq);
+                my $OriginCDSsseqLen = length($OriginCDSsseq);
+
+                ############## Find longest ORF!!!!!!!!!!
+                # my $originCDSseqs="";
+                my $removeSECDSseqs = "";
+                # my $originCDSseqsLen = "";
+                my $removeSECDSseqsLen = "";
+                
+                # my $OriginExonsseqAA_1st = seq2aa1st($OriginExonsseq);
+                # my $OriginExonsseqAA_2st = seq2aa2st($OriginExonsseq);
+                # my $OriginExonsseqAA_3st = seq2aa3st($OriginExonsseq);
+                my $OriginCDSsseqAA_1st = seq2aa1st($OriginCDSsseq);
+
+
+                my $removeSEexonsseqAA_1st = seq2aa1st($removeSEexonsseq);
+                my $removeSEexonsseqAA_2ed = seq2aa2ed($removeSEexonsseq);
+                my $removeSEexonsseqAA_3rd = seq2aa3rd($removeSEexonsseq);
+
+                my $tmpLongestORF_AA = "";
+                my $tmpLongestORF_AALen = 0; ### Rule for tell the longest ORF.
+                my $tmpLongestORF_AApos = "";
+                my @tmpORFs_1st = ();
+                my @tmpORFAAendPos_1st =();
+                my @tmpORFAAStartPos_1st =();
+                my @tmpORFendPos_1st =();
+                my @tmpORFStartPos_1st =();
+
+                say "1st Fullseqs: $removeSEexonsseqAA_1st";
+                while($removeSEexonsseqAA_1st =~ m/(M[A-Z]*_)/gc){
+                    say "1st: $1";
+                    my $tmpmatchLen = length($1);
+                    push (@tmpORFs_1st, $1);
+                    push(@tmpORFendPos_1st,pos($removeSEexonsseqAA_1st)*3);                    
+                    push(@tmpORFStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3);   
+                    
+                    push(@tmpORFAAendPos_1st,pos($removeSEexonsseqAA_1st));                    
+                    push(@tmpORFAAStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen));                    
+                    
+                    if (length($1)>$tmpLongestORF_AALen){
+                        $tmpLongestORF_AA = $1;
+                        $tmpLongestORF_AALen = length($1);
+                    }
+                }
+
+                my @tmpORFs_2ed = ();
+                my @tmpORFendPos_2ed =();
+                my @tmpORFStartPos_2ed =();
+                my @tmpORFAAendPos_2ed =();
+                my @tmpORFAAStartPos_2ed =();
+                
+                say "2st Fullseqs: $removeSEexonsseqAA_2ed";
+
+                while($removeSEexonsseqAA_2ed =~ m/(M[A-Z]*_)/gc){
+                    say "2ed $1";
+                    my $tmpmatchLen = length($1);
+                    push(@tmpORFs_2ed, $1);
+                    push(@tmpORFendPos_2ed,pos($removeSEexonsseqAA_2ed)*3+1);
+                    push(@tmpORFStartPos_2ed, (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1 ); 
+                    push(@tmpORFAAendPos_2ed,pos($removeSEexonsseqAA_2ed));
+                    push(@tmpORFAAStartPos_2ed, pos($removeSEexonsseqAA_2ed)-$tmpmatchLen);                     
+                    
+                    if (length($1)>$tmpLongestORF_AALen){
+                        $tmpLongestORF_AA = $1;
+                        $tmpLongestORF_AALen = length($1);
+
+                    }
+                }
+
+                my @tmpORFs_3rd = ();
+                my @tmpORFendPos_3rd =();
+                my @tmpORFStartPos_3rd =();
+                my @tmpORFAAendPos_3rd =();
+                my @tmpORFAAStartPos_3rd =();
+
+                say "3rd Fullseqs: $removeSEexonsseqAA_3rd";
+                
+                while($removeSEexonsseqAA_3rd =~ m/(M[A-Z]*_)/gc){
+                    say "3rd $1";
+                    my $tmpmatchLen = length($1);
+                    push(@tmpORFs_3rd, $1);
+                    push(@tmpORFendPos_3rd,pos($removeSEexonsseqAA_3rd)*3+2);
+                    push(@tmpORFStartPos_3rd, (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2 ); 
+                    push(@tmpORFAAendPos_3rd,pos($removeSEexonsseqAA_3rd));
+                    push(@tmpORFAAStartPos_3rd, pos($removeSEexonsseqAA_3rd)-$tmpmatchLen);                  
+                    
+                    if (length($1)>$tmpLongestORF_AALen){
+                        $tmpLongestORF_AA = $1;
+                        $tmpLongestORF_AALen = length($1);
+
+                    }
+                }
+
+                say "$tmptransid Longest ORFAA $tmpLongestORF_AA";
+
+                
+
+                
+
+
+
+
+
+
+
+
+
+
+
+                print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon";
+                print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen\n";
 
             }elsif($setransexonid > $stopcodon_exonnumber){ #### SE in 3UTR
 
@@ -1122,10 +1264,6 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
                     }
                 }
-
-
-
-
 
                 print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR";
                 print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
@@ -1384,7 +1522,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
         my $flag1="-";
 
-        #First analysis Plus strain.
+        #First analysis Plus strand.
         if ($transPM eq "+"){
 
             if ($startcodon_exonnumber > $UStransexonnumber){
@@ -1612,7 +1750,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
         
     }
 
-
+    
 
 }
 
