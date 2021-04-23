@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome v1.1000 2021/04/15
+# Get NMD transid from GTF and genome v1.1000 2021/04/23
 # hukaining@gmail.com
 
 use strict;
@@ -464,6 +464,27 @@ my(%genetic_code) = (
     'GGC' => 'G',    # Glycine
     'GGG' => 'G',    # Glycine
     'GGT' => 'G',    # Glycine
+    'A' => '?1',
+    'T' => '?1',
+    'G' => '?1',
+    'C' => '?1',
+    'AA' => '?2',
+    'AT' => '?2',
+    'AG' => '?2',
+    'AC' => '?2',
+    'TA' => '?2',
+    'TT' => '?2',
+    'TG' => '?2',
+    'TC' => '?2',
+    'GA' => '?2',
+    'GT' => '?2',
+    'GG' => '?2',
+    'GC' => '?2',
+    'CA' => '?2',
+    'CT' => '?2',
+    'CG' => '?2',
+    'CC' => '?2',
+
 );
 
 sub codon2aa {
@@ -485,7 +506,8 @@ sub seq2aa1st {
     my $dna= $_[0];
     my $protein1="";
 
-    for(my $i=0; $i < (length($dna) - 2) ; $i += 3) {
+    # for(my $i=0; $i < (length($dna) - 2) ; $i += 3) {
+    for(my $i=0; $i < length($dna) ; $i += 3) {
     my $codon = substr($dna,$i,3);
         $protein1 .= codon2aa($codon);
     
@@ -498,7 +520,8 @@ sub seq2aa2ed {
     my $dna= $_[0];
     my $protein2="";
 
-    for(my $i=1; $i < (length($dna) - 2) ; $i += 3) {
+    # for(my $i=1; $i < (length($dna) - 2) ; $i += 3) {
+    for(my $i=1; $i < length($dna) ; $i += 3) {
     my $codon = substr($dna,$i,3);
        $protein2 .= codon2aa($codon);
     
@@ -511,7 +534,8 @@ sub seq2aa3rd {
     my $dna= $_[0];
     my $protein3="";
 
-    for(my $i=2; $i < (length($dna) - 2) ; $i += 3) {
+    # for(my $i=2; $i < (length($dna) - 2) ; $i += 3) {
+    for(my $i=2; $i < length($dna)  ; $i += 3) {
     my $codon = substr($dna,$i,3);
        $protein3 .= codon2aa($codon);
     
@@ -1017,7 +1041,7 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                 }
 
               
-                for (my $jj = $startcodon_exonnumber + 1; $jj <= $stopcodon_exonnumber; $jj++){
+                for (my $jj = $startcodon_exonnumber; $jj <= $stopcodon_exonnumber; $jj++){
                         $OriginCDSsseq .= $CDSseqs{$tmptransid}[$jj];
                         # $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
                 }
@@ -1045,22 +1069,26 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                 my $tmpLongestORF_AA = "";
                 my $tmpLongestORF_AALen = 0; ### Rule for tell the longest ORF.
                 my $tmpLongestORF_AApos = "";
-                my @tmpORFs_1st = ();
-                my @tmpORFAAendPos_1st =();
-                my @tmpORFAAStartPos_1st =();
-                my @tmpORFendPos_1st =();
-                my @tmpORFStartPos_1st =();
+                # my @tmpORFs_1st = ();
+                # my @tmpORFAAendPos_1st =();
+                # my @tmpORFAAStartPos_1st =();
+                # my @tmpORFendPos_1st =();
+                # my @tmpORFStartPos_1st =();
+                my %tmpORFseqPos; # 0, 1, 2, 3=> AA start Pos, AA end Pos, DNA start Pos, DNA end Pos;
 
-                say "1st Fullseqs: $removeSEexonsseqAA_1st";
-                while($removeSEexonsseqAA_1st =~ m/(M[A-Z]*_)/gc){
-                    say "1st: $1";
+                # say "1st Fullseqs: $removeSEexonsseqAA_1st";
+                while($removeSEexonsseqAA_1st =~ m/(M[A-Z]*(_|$))/gc){
+                    # say "1st: $1";
                     my $tmpmatchLen = length($1);
-                    push (@tmpORFs_1st, $1);
-                    push(@tmpORFendPos_1st,pos($removeSEexonsseqAA_1st)*3);                    
-                    push(@tmpORFStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3);   
-                    
-                    push(@tmpORFAAendPos_1st,pos($removeSEexonsseqAA_1st));                    
-                    push(@tmpORFAAStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen));                    
+                    # push (@tmpORFs_1st, $1);
+                    # push(@tmpORFendPos_1st,pos($removeSEexonsseqAA_1st)*3);                    
+                    # push(@tmpORFStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3);   
+                    $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_1st)-$tmpmatchLen;
+                    $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_1st);
+                    $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3;
+                    $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_1st)*3;                    
+                    # push(@tmpORFAAendPos_1st,pos($removeSEexonsseqAA_1st));                    
+                    # push(@tmpORFAAStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen));                    
                     
                     if (length($1)>$tmpLongestORF_AALen){
                         $tmpLongestORF_AA = $1;
@@ -1068,46 +1096,26 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                     }
                 }
 
-                my @tmpORFs_2ed = ();
-                my @tmpORFendPos_2ed =();
-                my @tmpORFStartPos_2ed =();
-                my @tmpORFAAendPos_2ed =();
-                my @tmpORFAAStartPos_2ed =();
+                # my @tmpORFs_2ed = ();
+                # my @tmpORFendPos_2ed =();
+                # my @tmpORFStartPos_2ed =();
+                # my @tmpORFAAendPos_2ed =();
+                # my @tmpORFAAStartPos_2ed =();
                 
-                say "2st Fullseqs: $removeSEexonsseqAA_2ed";
+                # say "2st Fullseqs: $removeSEexonsseqAA_2ed";
 
-                while($removeSEexonsseqAA_2ed =~ m/(M[A-Z]*_)/gc){
-                    say "2ed $1";
+                while($removeSEexonsseqAA_2ed =~ m/(M[A-Z]*(_|$))/gc){
+                    # say "2ed $1";
                     my $tmpmatchLen = length($1);
-                    push(@tmpORFs_2ed, $1);
-                    push(@tmpORFendPos_2ed,pos($removeSEexonsseqAA_2ed)*3+1);
-                    push(@tmpORFStartPos_2ed, (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1 ); 
-                    push(@tmpORFAAendPos_2ed,pos($removeSEexonsseqAA_2ed));
-                    push(@tmpORFAAStartPos_2ed, pos($removeSEexonsseqAA_2ed)-$tmpmatchLen);                     
-                    
-                    if (length($1)>$tmpLongestORF_AALen){
-                        $tmpLongestORF_AA = $1;
-                        $tmpLongestORF_AALen = length($1);
-
-                    }
-                }
-
-                my @tmpORFs_3rd = ();
-                my @tmpORFendPos_3rd =();
-                my @tmpORFStartPos_3rd =();
-                my @tmpORFAAendPos_3rd =();
-                my @tmpORFAAStartPos_3rd =();
-
-                say "3rd Fullseqs: $removeSEexonsseqAA_3rd";
-                
-                while($removeSEexonsseqAA_3rd =~ m/(M[A-Z]*_)/gc){
-                    say "3rd $1";
-                    my $tmpmatchLen = length($1);
-                    push(@tmpORFs_3rd, $1);
-                    push(@tmpORFendPos_3rd,pos($removeSEexonsseqAA_3rd)*3+2);
-                    push(@tmpORFStartPos_3rd, (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2 ); 
-                    push(@tmpORFAAendPos_3rd,pos($removeSEexonsseqAA_3rd));
-                    push(@tmpORFAAStartPos_3rd, pos($removeSEexonsseqAA_3rd)-$tmpmatchLen);                  
+                    # push(@tmpORFs_2ed, $1);
+                    # push(@tmpORFendPos_2ed,pos($removeSEexonsseqAA_2ed)*3+1);
+                    # push(@tmpORFStartPos_2ed, (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1 ); 
+                    # push(@tmpORFAAendPos_2ed,pos($removeSEexonsseqAA_2ed));
+                    # push(@tmpORFAAStartPos_2ed, pos($removeSEexonsseqAA_2ed)-$tmpmatchLen);   
+                    $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_2ed)-$tmpmatchLen;
+                    $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_2ed);
+                    $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1;
+                    $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_2ed)*3 +1;                     
                     
                     if (length($1)>$tmpLongestORF_AALen){
                         $tmpLongestORF_AA = $1;
@@ -1116,16 +1124,51 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                     }
                 }
 
-                say "$tmptransid Longest ORFAA $tmpLongestORF_AA";
+                # my @tmpORFs_3rd = ();
+                # my @tmpORFendPos_3rd =();
+                # my @tmpORFStartPos_3rd =();
+                # my @tmpORFAAendPos_3rd =();
+                # my @tmpORFAAStartPos_3rd =();
 
+                # say "3rd Fullseqs: $removeSEexonsseqAA_3rd";
                 
+                while($removeSEexonsseqAA_3rd =~ m/(M[A-Z]*(_|$))/gc){
+                    # say "3rd $1";
+                    my $tmpmatchLen = length($1);
+                    # push(@tmpORFs_3rd, $1);
+                    # push(@tmpORFendPos_3rd,pos($removeSEexonsseqAA_3rd)*3+2);
+                    # push(@tmpORFStartPos_3rd, (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2 ); 
+                    # push(@tmpORFAAendPos_3rd,pos($removeSEexonsseqAA_3rd));
+                    # push(@tmpORFAAStartPos_3rd, pos($removeSEexonsseqAA_3rd)-$tmpmatchLen); 
+                    $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_3rd)-$tmpmatchLen;
+                    $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_3rd);
+                    $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2;
+                    $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_3rd)*3 +2;                    
+                    
+                    if (length($1)>$tmpLongestORF_AALen){
+                        $tmpLongestORF_AA = $1;
+                        $tmpLongestORF_AALen = length($1);
 
-                
+                    }
+                }
 
+                # say "$tmptransid Longest ORFAA $tmpLongestORF_AALen $tmpLongestORF_AA";
+                my $LongestORF_AA_start = $tmpORFseqPos{$tmpLongestORF_AA}[0];
+                my $LongestORF_AA_end = $tmpORFseqPos{$tmpLongestORF_AA}[1];
+                my $LongestORF_DNA_start = $tmpORFseqPos{$tmpLongestORF_AA}[2];
+                my $LongestORF_DNA_end = $tmpORFseqPos{$tmpLongestORF_AA}[3];
+                 $removeSECDSseqsLen = $tmpLongestORF_AALen*3;
+                 $removeSECDSseqs = substr($removeSEexonsseq,$LongestORF_DNA_start,$removeSECDSseqsLen);
 
+                my $flagATG = "ATG";
+                if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
+                    # next;
+                    $flagATG = substr($originCDSseqs,0,3);
+                }
 
-
-
+               my $originCDSseqsAA = $OriginCDSsseqAA_1st;
+               my $originCDSseqsAALen = length($OriginCDSsseqAA_1st);
+               my $removeSEexonseqsAA = $tmpLongestORF_AA;
 
 
 
@@ -1133,7 +1176,9 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
 
                 print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon";
-                print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen\n";
+                print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
+                print OUTUSSEDSTRANSID "\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\n"; #\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
+
 
             }elsif($setransexonid > $stopcodon_exonnumber){ #### SE in 3UTR
 
@@ -1674,27 +1719,34 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
 
                 }
 
-                my $originCDSseqsAA_1stPos = $originCDSseqsAA_Pos[0];
+                my $originCDSseqsAA_1stPos = "-";
+                if (defined $originCDSseqsAA_Pos[0]){
+                $originCDSseqsAA_1stPos = $originCDSseqsAA_Pos[0];
+                }
                 
-                my $originCDSseqsAA_allPos = join(', ', @originCDSseqsAA_Pos);
+                my $originCDSseqsAA_allPos = "-";
+                $originCDSseqsAA_allPos = join(', ', @originCDSseqsAA_Pos);
 
 
                 my $flag2 ="-";
-                if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
-                    $flag2 = "Same stop codon";
-                }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
-                    $flag2 = "Downstream stop_codon";
-                }elsif($AddSEexonseqsAA_1stPos < $originFullCDSAA_1stPos){
-                    $flag2 = "Upstream stop_codon";
+                if ($AddSEexonseqsAA_1stPos ne "Null"){
+                    if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
+                        $flag2 = "Same stop codon";
+                    }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
+                        $flag2 = "Downstream stop_codon";
+                    }elsif($AddSEexonseqsAA_1stPos < $originFullCDSAA_1stPos){
+                        $flag2 = "Upstream stop_codon";
+                    }
                 }
-
                 my $lastJpos = "-";
                 my $flagnmd = "-";
                 my $lastdj= "-";
                 my $lastexonlen = $exonsLength{$tmptransid}[$transexonnumbers];
                 my $totallenofAddCDSlen = $tmpaccAddCDSlen{$transexonnumbers};
-                my $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
-                
+                my $addedSEDNA1stPos ="";
+                if ($AddSEexonseqsAA_1stPos ne "Null"){
+                    $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
+                }
 
                 if ($SEtransexonumber == $transexonnumbers - 1 or $SEtransexonumber == $transexonnumbers - 0.5){
                     $lastJpos = $tmpaccAddCDSlen{$SEtransexonumber};
@@ -1702,13 +1754,16 @@ LINE: while(defined(our $inputline = <INPUTLIST>)){
                     $lastJpos = $tmpaccAddCDSlen{$transexonnumbers-1};
                 }
 
-                $lastdj = $lastJpos - $addedSEDNA1stPos ; # Caculate the lastdj.
+                if ($addedSEDNA1stPos ne ""){
 
-                if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
-                    $flagnmd = "Last_exon";
+                    $lastdj = $lastJpos - $addedSEDNA1stPos ; # Caculate the lastdj.
 
-                }elsif($lastdj > $dj){
-                    $flagnmd ="NMD";
+                    if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
+                        $flagnmd = "Last_exon";
+
+                    }elsif($lastdj > $dj){
+                        $flagnmd ="NMD";
+                    }
                 }
 
                 
