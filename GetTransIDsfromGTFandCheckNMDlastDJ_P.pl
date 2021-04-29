@@ -877,13 +877,29 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                 if ($setransexonid < $startcodon_exonnumber){ # Start tell SE position. 5UTR Next!!!
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR\n";
+                    # my $originexonseqs="";
+                    # my $removeSEexonseqs="";
+                    # my $outSEseq = $exonseqs{$tmptransid}[$setransexonid];
+                    # my $outSEseqlen = length($outSEseq);
+                    # for (my $i = 1; $i<=$transexonnumbers;$i++){
+                    #     if($i == $setransexonid){
+                    #         $originexonseqs .= $exonseqs{$tmptransid}[$i];
+                    #     }else{
+                    #         $removeSEexonseqs .= $exonseqs{$tmptransid}[$i];
+                    #         $originexonseqs .= $exonseqs{$tmptransid}[$i];
+                    #     }
+                    # }
+                    # my $originexonseqsLen = length($originexonseqs);
+                    # my $removeSEexonseqsLen = length($removeSEexonseqs);
+
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR";
+                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\n";
 
                 }elsif($setransexonid > $startcodon_exonnumber and $setransexonid < $stopcodon_exonnumber){ ######### SE was inner exons. start remove SE.
 
                     #Start load start CDS + rest exons. Get sequence and length.
 
-                    our $removeSECDSseqs = "";
+                    my $removeSECDSseqs = "";
                     $removeSECDSseqs .= $CDSseqs{$tmptransid}[$startcodon_exonnumber];
                     $accCDSlength{$tmptransid}[$startcodon_exonnumber] = length($removeSECDSseqs);
 
@@ -1523,8 +1539,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                 if ($setransexonid > $stopcodon_exonnumber){ # This stopcodon_exonnumber is the startcondon_exonnumber in - shrand. # 5UTR pass.
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\t5UTR\n";
-
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\t5UTR";
+                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\n";
                 }elsif($setransexonid>$startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ ### SE is a inner exon.
 
                     our $removeSECDSseqs = "";
@@ -2175,8 +2191,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                 if ($startcodon_exonnumber > $UStransexonnumber){
                     $flag1 = "5UTR";
+                    my $addedSEseqlen = length($SEseq);
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\n";
+                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t\n";
                     next;
 
                 }else{
@@ -2385,8 +2402,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                 if ($stopcodon_exonnumber < $DStransexonnumber){ # $stopcodon_exonnumber is the startcodon_exonnumber in minus strand.
                     $flag1 = "5UTR";
+                    my $addedSEseqlen = length($SEseq);
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\n";
+                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t\n";
                     next;
 
                 }else{
