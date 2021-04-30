@@ -37,6 +37,7 @@ or die("[-]Error in command line arguments
     options:
     [-o string|outprefix Default: getseqsOut]
     [-p int |threads number Default: 1]
+    [-d int | distance of last junction. Default: 50]
     [-s string|Specify attribute type in GFF annotation for sorting. default: gene_id]
     [-f string|Specify feature type in GFF annotation.default: '']
        
@@ -977,9 +978,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     if($removeSEexonseqsAA_1stPos eq "Null"){                       
                         $flag1 = "No stop_codon";
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Need check";                  
+                        $flag1 = "Same stop_codon Need check";                  
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Same stop_codon";
+                        $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "Downstream stop_codon";                       
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
@@ -1431,7 +1432,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
                         $flag1 = "Same stop_codon Need Check";                    
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Same stop_codon";
+                        $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "Downstream stop_codon";                        
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
@@ -1610,9 +1611,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     if($removeSEexonseqsAA_1stPos eq "Null"){                       
                         $flag1 = "No stop_codon";
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Need check";                  
+                        $flag1 = "Same stop_codon Need check";                  
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Same stop_codon";
+                        $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "Downstream stop_codon";                       
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
@@ -2033,7 +2034,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
                         $flag1 = "Same stop_codon Need Check";                    
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Same stop_codon";
+                        $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "Downstream stop_codon";                        
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
@@ -2351,12 +2352,16 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $flag2 ="-";
                     if ($AddSEexonseqsAA_1stPos ne "Null"){
                         if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
-                            $flag2 = "Same stop codon";
-                        }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
+                            $flag2 = "Same stop_codon";
+                        }elsif($AddSEexonseqsAA_1stPos * 3 == $originFullCDSAA_1stPos *3 + $addedSEseqlen){
+                            $flag2 = "ORF Preserving";
+                        }elsif($AddSEexonseqsAA_1stPos *3  > $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Downstream stop_codon";
-                        }elsif($AddSEexonseqsAA_1stPos < $originFullCDSAA_1stPos){
+                        }elsif($AddSEexonseqsAA_1stPos * 3 < $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Upstream stop_codon";
                         }
+                    }else{
+                        $flag2 ="No stop_codon";
                     }
                     my $lastJpos = "-";
                     my $flagnmd = "-";
@@ -2557,12 +2562,16 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $flag2 ="-";
                     if ($AddSEexonseqsAA_1stPos ne "Null"){    ###### 
                         if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
-                            $flag2 = "Same stop codon";
-                        }elsif($AddSEexonseqsAA_1stPos > $originFullCDSAA_1stPos){
+                            $flag2 = "Same stop_codon";
+                        }elsif($AddSEexonseqsAA_1stPos * 3 == $originFullCDSAA_1stPos *3 + $addedSEseqlen){
+                            $flag2 = "ORF Preserving";
+                        }elsif($AddSEexonseqsAA_1stPos * 3  > $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Downstream stop_codon";
-                        }elsif($AddSEexonseqsAA_1stPos < $originFullCDSAA_1stPos){
+                        }elsif($AddSEexonseqsAA_1stPos *3 < $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Upstream stop_codon";
                         }
+                    }else{
+                        $flag2 = "No stop_codon";
                     }
                     my $lastJpos = "-";
                     my $flagnmd = "-";
