@@ -1156,7 +1156,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                             }
                         }
 
-                    }elsif ($flag1 eq "Downstream stop_codon"){
+                    }elsif ($flag1 eq "ORF preserving"){
                         $flag4 = $flagOriginNMD;
                         $flagEx_inNMD = "No_info";
                     }
@@ -1699,7 +1699,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     # print OUTUSSEDSTRANSID "\t$flag1\n"
                 }
 
-            }elsif($transPM eq "-"){  #### 2021-04-26 ##### Because in MM10 ensemble GTF, exons number is count by +. The  - strand exons start with the largest number of exon No. So using $DStransexonnumber as boundary. Switch stopcodon_exonnumber and startcodon_exonnumber, $UStransexonnumber and $DStransexonnumber.
+            }elsif($transPM eq "-"){ #---------------- #### 2021-04-26 ##### Because in MM10 ensemble GTF, exons number is count by +. The  - strand exons start with the largest number of exon No. So using $DStransexonnumber as boundary. Switch stopcodon_exonnumber and startcodon_exonnumber, $UStransexonnumber and $DStransexonnumber.
 
                 our $originexonseqs = "";
                 our $removeSEexonseqs = ""; 
@@ -1979,7 +1979,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                             }
                         }
 
-                    }elsif ($flag1 eq "Downstream stop_codon"){
+                    }elsif ($flag1 eq "ORF preserving"){
                         $flag4 = $flagOriginNMD;
                         $flagEx_inNMD = "No_info";
                     }
