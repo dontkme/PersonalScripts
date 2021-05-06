@@ -2705,11 +2705,25 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         $originFullCDS .= $CDSseqs{$tmptransid}[$tmpk];
 
                     }
-                    $originFullCDSlen = length($originFullCDS);
+                    $originFullCDSlen = length($originFullCDS);    #### original CDSs length.
 
                     my $addedSEseqlen = length($SEseq);
                     my $originCDSlen = $tmpaccOriginCDSlen{$transexonnumbers};
                     my $addSECDSlen = $tmpaccAddCDSlen{$transexonnumbers};
+
+                    my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj. 2021.05.06
+                    $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{$transexonnumbers-1};
+                    my $originCDSdj = 0;
+                    $originCDSdj = $originCDSexonRmLastexonseqLen - $originFullCDSlen;
+                    my $flagOriginNMD ="-";
+                    if ($originCDSdj > $dj){
+                        $flagOriginNMD = "NMD";
+                    }elsif($originCDSdj<0){
+                        $flagOriginNMD = "Last_exon";
+                    }
+
+
+
 
                     ########### Finished of loading DNA sequences.
 
@@ -2801,6 +2815,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $lastexonlen = $exonsLength{$tmptransid}[$transexonnumbers];
                     my $totallenofAddCDSlen = $tmpaccAddCDSlen{$transexonnumbers};
                     my $addedSEDNA1stPos ="";
+
                     if ($AddSEexonseqsAA_1stPos ne "Null"){
                         $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
                     }
@@ -2810,6 +2825,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     }else{
                         $lastJpos = $tmpaccAddCDSlen{$transexonnumbers-1};
                     }
+
+                    my $flagEx_inNMD="-";
 
                     if ($addedSEDNA1stPos ne ""){
 
@@ -2821,6 +2838,22 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         }elsif($lastdj > $dj){
                             $flagnmd ="NMD";
                         }
+
+                        if ($flagOriginNMD eq "NMD"){
+                            if ($flagnmd eq "NMD"){
+                                $flagEx_inNMD = "No_info";
+                            }else{
+                                $flagEx_inNMD = "NMD_ex";
+                            }
+                        }else{
+                            if ($flagnmd eq "NMD"){
+                                $flagEx_inNMD = "NMD_in";
+                            }
+
+                            if ($flagnmd eq $flagOriginNMD){
+                                $flagEx_inNMD = "No_info";
+                            }
+                        }
                     }
 
                     
@@ -2828,8 +2861,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
                     print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t$originFullCDSlen\t$originCDSlen\t$addSECDSlen\t$SEseq\t$originFullCDS\t$tmpOriginCDS\t$tmpAddCDS";
-                    print OUTUSDSTRANSID "\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
-                    print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\n";
+                    print OUTUSDSTRANSID "\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
+                    print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\t$flagEx_inNMD\n";
                 }
 
 
@@ -2921,6 +2954,18 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $originCDSlen = $tmpaccOriginCDSlen{1};  ### No. 1 as end of exon number. !!!
                     my $addSECDSlen = $tmpaccAddCDSlen{1};
 
+                    my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj in Minus strand. 2021.05.06
+                    $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{2}; # 2 
+                    my $originCDSdj = 0;
+                    $originCDSdj = $originCDSexonRmLastexonseqLen - $originFullCDSlen;
+                    my $flagOriginNMD ="-";
+                    if ($originCDSdj > $dj){
+                        $flagOriginNMD = "NMD";
+                    }elsif($originCDSdj<0){
+                        $flagOriginNMD = "Last_exon";
+                    }
+
+
                     ########### Finished of loading DNA sequences.
 
                     my $originCDSseqsAA = seq2aa1st($tmpOriginCDS);   ### Translate 2 AA.
@@ -3011,6 +3056,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $lastexonlen = $exonsLength{$tmptransid}[1]; ### No. 1 as end of exons.
                     my $totallenofAddCDSlen = $tmpaccAddCDSlen{1};
                     my $addedSEDNA1stPos ="";
+                    my $flagEx_inNMD ="-";
                     if ($AddSEexonseqsAA_1stPos ne "Null"){
                         $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
                     }
@@ -3031,6 +3077,22 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         }elsif($lastdj > $dj){
                             $flagnmd ="NMD";
                         }
+
+                        if ($flagOriginNMD eq "NMD"){
+                            if ($flagnmd eq "NMD"){
+                                $flagEx_inNMD = "No_info";
+                            }else{
+                                $flagEx_inNMD = "NMD_ex";
+                            }
+                        }else{
+                            if ($flagnmd eq "NMD"){
+                                $flagEx_inNMD = "NMD_in";
+                            }
+                            if ($flagnmd eq $flagOriginNMD){
+                                $flagEx_inNMD = "No_info";
+                            }
+                        }
+
                     }
 
                     
@@ -3038,8 +3100,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
                     print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t$originFullCDSlen\t$originCDSlen\t$addSECDSlen\t$SEseq\t$originFullCDS\t$tmpOriginCDS\t$tmpAddCDS";
-                    print OUTUSDSTRANSID "\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
-                    print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\n";
+                    print OUTUSDSTRANSID "\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
+                    print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\t$flagEx_inNMD\n";
 
                     # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
                     # print OUTUSDSTRANSID "\t$flag1\n";
