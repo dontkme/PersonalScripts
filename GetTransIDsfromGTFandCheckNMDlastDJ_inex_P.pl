@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome (Multiple Threads version)v1.3110 2021/05/06
+# Get NMD transid from GTF and genome (Multiple Threads version)v1.320 2021/05/18
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GFF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.3110 2021/05/06.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.320 2021/05/18.\n");
 
 ###################sub TRseq##########
  
@@ -271,10 +271,11 @@ while(defined(our $inrow = <ANNOT>)){
             my $plusminus=$tmp[6];
             my $seqchrid=$tmp[0];
             my $annottype=$tmp[2];
+            my $seqlen = abs($seqendpos-$seqstartpos)+1;
 
             our $key1 = "$transcript_id.$gene_id.$annottype.exon.$exon_numberf3";
             # our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos..$seqendpos:$plusminus";
-            our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos-$seqendpos:$plusminus";
+            our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos-$seqendpos:$plusminus.$seqlen";
             $annotcount++;
             # print "$key\n";
             $key2Chr{$key}=$seqchrid;
@@ -289,7 +290,7 @@ while(defined(our $inrow = <ANNOT>)){
             $key2exonnumber{$key} = $exon_number;   
             $key2exonid{$key} = $exon_id;   
 
-            $key2length{$key} = abs($seqendpos-$seqstartpos+1);
+            $key2length{$key} = abs($seqendpos-$seqstartpos)+1;
             $trans_PM{$transcript_id} = $plusminus;
 
             # if ($exon_number > $trans_exonnumbers{$transcript_id} or !defined($trans_exonnumbers{$transcript_id})){
@@ -915,10 +916,10 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                 ### Tell wheather origin stop codon is a NMD signal. $dj.
 
                 $originCDSdj = $originCDSexonRmLastexonseqLen - $originCDSseqsLen; ####!!!!!!
-                if ($originCDSdj > $dj){
+                if ($originCDSdj >= $dj){
                     $flagOriginNMD ="NMD";
-                }elsif($originCDSdj<0){
-                    $flagOriginNMD ="Last_exon";
+                }elsif($originCDSdj <= 0){
+                    $flagOriginNMD = "Last_exon";
                 }
 
 
@@ -943,7 +944,11 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     # my $removeSEexonseqsLen = length($removeSEexonseqs);
 
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t5UTR";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\n";
+                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen";
+                    for (1..27){
+                        print OUTUSSEDSTRANSID "\t";
+                    }
+                    print OUTUSSEDSTRANSID "\n";
 
                 }elsif($setransexonid > $startcodon_exonnumber and $setransexonid < $stopcodon_exonnumber){ ######### SE was inner exon. start remove SE.
 
@@ -1084,6 +1089,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }                               
 
                             }
@@ -1139,6 +1146,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }                               
 
                             }
@@ -1521,6 +1530,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }
                                     
 
@@ -1671,6 +1682,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }
                                 
                             }
@@ -1790,7 +1803,15 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                 if ($setransexonid > $stopcodon_exonnumber){ # This stopcodon_exonnumber is the startcondon_exonnumber in - shrand. # 5UTR pass.
 
                     print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\t5UTR";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\n";
+                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen";
+
+                    for (1..27){
+                        print OUTUSSEDSTRANSID "\t";
+                    }
+                    print OUTUSSEDSTRANSID "\n";
+
+
+
                 }elsif($setransexonid>$startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ ### SE is a inner exon.
 
                     our $removeSECDSseqs = "";
@@ -1908,6 +1929,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }                               
 
                             }
@@ -1962,6 +1985,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }                               
 
                             }
@@ -2342,6 +2367,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }
                                 
                             }
@@ -2476,6 +2503,8 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                                 if($tmpdjlast >= $dj){
                                     $flag4 = "NMD";
+                                }elsif($tmpdjlast <= 0){
+                                    $flag4 = "Last_exon";
                                 }                          
 
                             }
@@ -2626,7 +2655,12 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     $flag1 = "5UTR";
                     my $addedSEseqlen = length($SEseq);
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t\n";
+                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t";
+                    for (1..24){
+                        print OUTUSDSTRANSID "\t";
+                    }
+                    print OUTUSDSTRANSID "\n";
+
                     next;
 
                 }else{
@@ -2716,9 +2750,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $originCDSdj = 0;
                     $originCDSdj = $originCDSexonRmLastexonseqLen - $originFullCDSlen;
                     my $flagOriginNMD ="-";
-                    if ($originCDSdj > $dj){
+                    if ($originCDSdj >= $dj){
                         $flagOriginNMD = "NMD";
-                    }elsif($originCDSdj<0){
+                    }elsif($originCDSdj<=0){
                         $flagOriginNMD = "Last_exon";
                     }
 
@@ -2835,7 +2869,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
                             $flagnmd = "Last_exon";
 
-                        }elsif($lastdj > $dj){
+                        }elsif($lastdj >= $dj){
                             $flagnmd ="NMD";
                         }
 
@@ -2874,7 +2908,11 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     $flag1 = "5UTR";
                     my $addedSEseqlen = length($SEseq);
                     print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t\n";
+                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t";
+                    for (1..24){
+                        print OUTUSDSTRANSID "\t";
+                    }
+                    print OUTUSDSTRANSID "\n";
                     next;
 
                 }else{
@@ -2959,9 +2997,9 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $originCDSdj = 0;
                     $originCDSdj = $originCDSexonRmLastexonseqLen - $originFullCDSlen;
                     my $flagOriginNMD ="-";
-                    if ($originCDSdj > $dj){
+                    if ($originCDSdj >= $dj){
                         $flagOriginNMD = "NMD";
-                    }elsif($originCDSdj<0){
+                    }elsif($originCDSdj <= 0){
                         $flagOriginNMD = "Last_exon";
                     }
 
@@ -3074,7 +3112,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
                             $flagnmd = "Last_exon";
 
-                        }elsif($lastdj > $dj){
+                        }elsif($lastdj >= $dj){
                             $flagnmd ="NMD";
                         }
 
@@ -3180,6 +3218,62 @@ close OUTDSTRANSIDALL;
 close OUTUSDSTRANSIDALL;
 close OUTUSSEDSTRANSIDALL;
 
+########################### Start combined #########################
+say "Finished predicting. Start to combine results.";
+
+open USSEDSRES, "< $opfn.outUSSEDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSSEDStransid.txt\n");
+open USDSRES, "< $opfn.outUSDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSDStransid.txt\n");
+open COMBINEDOUT, "> $opfn.outCombined.txt" or die ("[-] Error: Can't open or creat $opfn.outCombined.txt\n");
+print COMBINEDOUT "QueryCol1\tSEUSDSCoordinates\tQueryCol3\tTranscript_id\tStrand\tExons\tStart_exon\tStop_exon\tSE_exon_Number\tSE(US)_Pos\tSE_length\tOri_CDS_length\tOri_Star_codon_to_exon_end_seq_len\trm/add_SE_start_to_end_seq_len";
+print COMBINEDOUT "\tSEseq\tOri_CDSexons_seq\trm/add_SE_CDSexons_seq\tOri_last_junction_pos\tOri_last_dj\tOri_NMD\tStart_codon\tOri_AA\trm/add_SE_AA";
+print COMBINEDOUT "\tAA_len+1\tOri_AA_1st_stop_pos\tOri_AA_stop_pos\tSEed_AA_1st_stop_pos\tSEed_AA_stop_pos\tFrame_shift_flag\tNew_1st_stop_pos_dj\tNMD_flag\tNMD_in/ex_flag\tsource\n";
+
+while (my $rmSEres=<USSEDSRES>){
+    my @tmprmSEres = split("\t",$rmSEres);
+    print COMBINEDOUT "$tmprmSEres[0]";
+    my @rmSEcolumn =(1..4,6..8,5,9,13,18,20,19,10,16,17,21..24,25..26,27..32,39..40);
+    for my $i (@rmSEcolumn){
+        # say $i;
+        if ($i== 27){
+
+            if ($tmprmSEres[$i] ne ""){
+                my $finaloriginstoppos = $tmprmSEres[$i] + 1; #AAlength + 1 = stop_codon pos.
+                print COMBINEDOUT "\t$finaloriginstoppos";
+            }else{
+                print COMBINEDOUT "\t$tmprmSEres[$i]";
+            }
+
+        }else{
+            print COMBINEDOUT "\t$tmprmSEres[$i]";
+        }
+    }
+    my $tmpNMDinexflag = $tmprmSEres[41];
+    $tmpNMDinexflag =~ s/\n//;
+    print COMBINEDOUT "\t$tmpNMDinexflag\tUSSEDS\n";
+
+}
+
+while (my $addSEres=<USDSRES>){
+    my @tmpaddSEres = split("\t",$addSEres);
+    print COMBINEDOUT "$tmpaddSEres[0]";
+    my @addSEcolumn =(1..5,10,11,9,12..18,20,21..24,25,27,29..34,39..40);
+    for my $i (@addSEcolumn){
+        # say $i;
+        
+        print COMBINEDOUT "\t$tmpaddSEres[$i]";
+    }
+    my $tmpNMDinexflag = $tmpaddSEres[41];
+    $tmpNMDinexflag =~ s/\n//;
+    print COMBINEDOUT "\t$tmpNMDinexflag\tUSDS\n";
+
+}
+
+
+
+
+close USSEDSRES ;
+close USDSRES ;
+close COMBINEDOUT ;
 ######################################
 # End  main
 ######################################
@@ -3187,3 +3281,5 @@ our $endtime=time();
 #say $starttime;
 #say $endtime;
 printf "Done! %g Sec %g Min\n",$endtime-$starttime,($endtime-$starttime)/60;
+
+
