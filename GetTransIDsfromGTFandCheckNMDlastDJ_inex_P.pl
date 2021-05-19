@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome (Multiple Threads version)v1.320 2021/05/18
+# Get NMD transid from GTF and genome (Multiple Threads version)v1.321 2021/05/19
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GFF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.320 2021/05/18.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.321 2021/05/19.\n");
 
 ###################sub TRseq##########
  
@@ -1792,7 +1792,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                 ### Tell wheather origin stop codon is a NMD signal. $dj.
 
                 $originCDSdj = $originCDSexonRmLastexonseqLen - $originCDSseqsLen; ####!!!!!!
-                if ($originCDSdj > $dj){
+                if ($originCDSdj >= $dj){
                     $flagOriginNMD ="NMD";
                 }elsif($originCDSdj<0){
                     $flagOriginNMD ="Last_exon";
@@ -3231,7 +3231,7 @@ print COMBINEDOUT "\tAA_len+1\tOri_AA_1st_stop_pos\tOri_AA_stop_pos\tSEed_AA_1st
 while (my $rmSEres=<USSEDSRES>){
     my @tmprmSEres = split("\t",$rmSEres);
     print COMBINEDOUT "$tmprmSEres[0]";
-    my @rmSEcolumn =(1..4,6..8,5,9,13,18,20,19,10,16,17,21..24,25..26,27..32,39..40);
+    my @rmSEcolumn =(1..4,6..8,5,9,13,18,20,19,10,16,17,21..24,25..26,27..32,39,40);
     for my $i (@rmSEcolumn){
         # say $i;
         if ($i== 27){
@@ -3256,7 +3256,7 @@ while (my $rmSEres=<USSEDSRES>){
 while (my $addSEres=<USDSRES>){
     my @tmpaddSEres = split("\t",$addSEres);
     print COMBINEDOUT "$tmpaddSEres[0]";
-    my @addSEcolumn =(1..5,10,11,9,12..18,20,21..24,25,27,29..34,39..40);
+    my @addSEcolumn =(1..5,10,11,9,12..18,20,21..24,25,27,29..34,37,40);
     for my $i (@addSEcolumn){
         # say $i;
         
