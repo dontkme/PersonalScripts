@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome (Multiple Threads version)v1.321 2021/05/19
+# Get NMD transid from GTF and genome (Multiple Threads version)v1.330 2021/05/25
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GFF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.321 2021/05/19.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.330 2021/05/25.\n");
 
 ###################sub TRseq##########
  
@@ -1184,7 +1184,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     #End loaded CDS + exons.
                     
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tInner_exon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
                     print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\n";
@@ -1399,7 +1399,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
 
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tStart_codon";
                     print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     # print OUTUSSEDSTRANSID "\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\n"; #\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t-\t-\t-\t-";
@@ -1635,7 +1635,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     if($removeSEexonseqsAA_1stPos eq "Null"){                        
                         $flag1 = "No stop_codon";
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Same stop_codon Need Check";                    
+                        $flag1 = "Same stop_codon Need check";                    
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
@@ -1705,7 +1705,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
 
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstop_codon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tStop_codon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
                     print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\n";
@@ -2012,7 +2012,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     #End loaded CDS + exons.
                     
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tinner_exon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tInner_exon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
                     print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\n";
@@ -2250,7 +2250,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     }
                     
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tstart_codon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tStart_codon";
                     print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     # print OUTUSSEDSTRANSID "\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\n"; #\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t-\t-\t-\t-";
@@ -2456,7 +2456,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     if($removeSEexonseqsAA_1stPos eq "Null"){                        
                         $flag1 = "No stop_codon";
                     }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Same stop_codon Need Check";                    
+                        $flag1 = "Same stop_codon Need check";                    
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
                         $flag1 = "ORF preserving";
                     }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
@@ -2527,7 +2527,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
 
 
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tstop_codon";
+                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tStop_codon";
                     print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
                     print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
                     print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\n";
@@ -2834,7 +2834,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
                             $flag2 = "Same stop_codon";
                         }elsif($AddSEexonseqsAA_1stPos * 3 == $originFullCDSAA_1stPos *3 + $addedSEseqlen){
-                            $flag2 = "ORF Preserving";
+                            $flag2 = "ORF preserving";
                         }elsif($AddSEexonseqsAA_1stPos *3  > $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Downstream stop_codon";
                         }elsif($AddSEexonseqsAA_1stPos * 3 < $originFullCDSAA_1stPos *3 + $addedSEseqlen){
@@ -3079,7 +3079,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                         if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
                             $flag2 = "Same stop_codon";
                         }elsif($AddSEexonseqsAA_1stPos * 3 == $originFullCDSAA_1stPos *3 + $addedSEseqlen){
-                            $flag2 = "ORF Preserving";
+                            $flag2 = "ORF preserving";
                         }elsif($AddSEexonseqsAA_1stPos * 3  > $originFullCDSAA_1stPos *3 + $addedSEseqlen){
                             $flag2 = "Downstream stop_codon";
                         }elsif($AddSEexonseqsAA_1stPos *3 < $originFullCDSAA_1stPos *3 + $addedSEseqlen){
@@ -3224,7 +3224,7 @@ say "Finished predicting. Start to combine results.";
 open USSEDSRES, "< $opfn.outUSSEDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSSEDStransid.txt\n");
 open USDSRES, "< $opfn.outUSDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSDStransid.txt\n");
 open COMBINEDOUT, "> $opfn.outCombined.txt" or die ("[-] Error: Can't open or creat $opfn.outCombined.txt\n");
-print COMBINEDOUT "QueryCol1\tSEUSDSCoordinates\tQueryCol3\tTranscript_id\tStrand\tExons\tStart_exon\tStop_exon\tSE_exon_Number\tSE(US)_Pos\tSE_length\tOri_CDS_length\tOri_Star_codon_to_exon_end_seq_len\trm/add_SE_start_to_end_seq_len";
+print COMBINEDOUT "#QueryCol1\tSEUSDSCoordinates\tQueryCol3\tTranscript_id\tStrand\tExons\tStart_exon\tStop_exon\tSE_exon_Number\tSE(US)_Pos\tSE_length\tOri_CDS_length\tOri_Star_codon_to_exon_end_seq_len\trm/add_SE_start_to_end_seq_len";
 print COMBINEDOUT "\tSEseq\tOri_CDSexons_seq\trm/add_SE_CDSexons_seq\tOri_last_junction_pos\tOri_last_dj\tOri_NMD\tStart_codon\tOri_AA\trm/add_SE_AA";
 print COMBINEDOUT "\tAA_len+1\tOri_AA_1st_stop_pos\tOri_AA_stop_pos\tSEed_AA_1st_stop_pos\tSEed_AA_stop_pos\tFrame_shift_flag\tNew_1st_stop_pos_dj\tNMD_flag\tNMD_in/ex_flag\tsource\n";
 
