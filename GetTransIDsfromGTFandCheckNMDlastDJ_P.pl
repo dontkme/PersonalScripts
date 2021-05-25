@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome (Multiple Threads version)v1.3100 2021/05/05
+# Get NMD transid from GTF and genome (Multiple Threads version)v1.3000 2021/05/04
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GFF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.3100 2021/05/05.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.3000 2021/05/04.\n");
 
 ###################sub TRseq##########
  
@@ -273,8 +273,7 @@ while(defined(our $inrow = <ANNOT>)){
             my $annottype=$tmp[2];
 
             our $key1 = "$transcript_id.$gene_id.$annottype.exon.$exon_numberf3";
-            # our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos..$seqendpos:$plusminus";
-            our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos-$seqendpos:$plusminus";
+            our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos..$seqendpos:$plusminus";
             $annotcount++;
             # print "$key\n";
             $key2Chr{$key}=$seqchrid;
@@ -670,23 +669,20 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
         my $DSstartpos = $tmpDS[1]+1;
         my $DSendpos = $tmpDS[2];
         if ($tmpSE[3] eq ""){next;} #pass Null line.
-        # my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";   ### Pos to match keys. 
-        # my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]\:\\$tmpUS[3]";
-        # my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]\:\\$tmpDS[3]";
-        my $SEpos="$tmpSE[0]\:$SEstartpos-$tmpSE[2]\:\\$tmpSE[3]";   ### Pos to match keys. 
-        my $USpos="$tmpUS[0]\:$USstartpos-$tmpUS[2]\:\\$tmpUS[3]";
-        my $DSpos="$tmpDS[0]\:$DSstartpos-$tmpDS[2]\:\\$tmpDS[3]";
+        my $SEpos="$tmpSE[0]\:$SEstartpos\[.\]\{2\}$tmpSE[2]\:\\$tmpSE[3]";   ### Pos to match keys. 
+        my $USpos="$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]\:\\$tmpUS[3]";
+        my $DSpos="$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]\:\\$tmpDS[3]";
         my $SEseq = getseq("$genename.SE",$SEchr, $SEstartpos, $SEendpos, $SEPM);  #### Get SEseq. 2021.04.19 bug fix. $SEstartpos +1. remove +1
 
         # my $SEposre="qr/$tmpSE[0]\:$SEstartpos\\.\\.$tmpSE[2]\\:$tmpSE[3]/";
         # my $USposre="qr/$tmpUS[0]\:$USstartpos\\.\\.$tmpUS[2]:\\$tmpUS[3]/";
         # my $DSposre="qr/$tmpDS[0]\:$DSstartpos\\.\\.$tmpDS[2]:\\$tmpDS[3]/";
 
-         say $SEpos;
+        #  say $SEpos;
         #  say $SEposre;
-         say $USpos;
+        #  say $USpos;
         # say $USposre;
-          say $DSpos;
+        #  say $DSpos;
         # say $DSposre;
 
         our (@pos1, @pos2, @pos3, @pos1trans)= ((),(),()); 
@@ -2327,9 +2323,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     $UStransexonnumber = $key2exonnumber{$exonkey};
                     # say $setransexonid;
 
-                }
-
-                if($exonkey =~ m/$DSpos/){
+                }elsif($exonkey =~/$DSpos/){
                     $DStransexonnumber = $key2exonnumber{$exonkey};
                 }
 
@@ -2601,7 +2595,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     if ($startcodon_exonnumber == $DStransexonnumber){
                         $flag1 = "Stop_codon";
-                    }elsif($DStransexonnumber < $startcodon_exonnumber){
+                    }elsif($startcodon_exonnumber > $DStransexonnumber){
                         $flag1 = "3UTR";
                     }elsif($DStransexonnumber > $startcodon_exonnumber and $DStransexonnumber <= $stopcodon_exonnumber){
                         $flag1 = "Start or inner exons";
