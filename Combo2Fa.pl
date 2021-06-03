@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Transformat NMD combined result to Fasta file. (Combo2Fa)v0.10 2021/06/01
+# Transformat NMD combined result to Fasta file. (Combo2Fa)v0.15 2021/06/03
 # hukaining@gmail.com
 
 use strict;
@@ -15,7 +15,7 @@ use Pod::Usage;
 #our $MAX_processes=2;
 #my $pm=Parallel::ForkManager->new($MAX_processes);
 use re 'eval';
-our $opfn="EAHeli_out";
+our $opfn="NMDSEFas";
 my $verbose;
 
 GetOptions("o=s" => \$opfn,"verbose"=>\$verbose)
@@ -24,7 +24,7 @@ or die("[-]Error in command line arguments
     options:
 	 [-o string|output prefix Default: Combined_fasta]
 	
-    Note: Transformat NMD combined result to Fasta file. (Combo2Fa)v0.10 2021/06/01\n");
+    Note: Transformat NMD combined result to Fasta file. (Combo2Fa)v0.15 2021/06/03\n");
 
 ############### Main ###########
 open COMBOFA,"> $opfn.fa" or die ("[-] Error: Can't open or create $opfn.fa\n");
@@ -40,8 +40,10 @@ while(defined(our $seq = <>)){
 
     }else{
         my @tmp = split("\t",$seq);
-        my $originName = "$tmp[0].$tmp[1].$tmp[2].$tmp[3].$count";
-        my $simpleexonid = "$tmp[0]:$tmp[3].$count"; # [3] transcript_id
+        my $originName = "$tmp[0].$tmp[1].$tmp[2].$tmp[3].$count:$tmp[34]";
+        chomp $originName;
+        my $simpleexonid = "$tmp[0]:$tmp[3].$count:$tmp[34]"; # [3] transcript_id [34] SEupstreamAApos
+        chomp $simpleexonid;
         my $originNameSimple = $originName;
             $originNameSimple =~ s/@//g;
         my $originAASeq = $tmp[21];

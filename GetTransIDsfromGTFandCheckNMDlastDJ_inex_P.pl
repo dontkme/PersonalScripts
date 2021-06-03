@@ -3284,8 +3284,9 @@ while (my $rmSEres=<USSEDSRES>){
      $tmpSEupsteramCDSLen= $tmprmSEres[42];
      $tmpSEupsteramCDSAALen= $tmprmSEres[43];
     $tmpSEupsteramCDSAALen =~ s/\n//;
-        unless($tmpSEupsteramCDSAALen eq ""){
-    $tmpSEupsteramCDSAALen=sprintf "%.1f",$tmpSEupsteramCDSAALen;
+    unless($tmpSEupsteramCDSAALen eq ""){
+        $tmpSEupsteramCDSAALen=sprintf("%.1f", $tmpSEupsteramCDSAALen);
+        # say $tmpSEupsteramCDSAALen;
     }
 
     print COMBINEDOUT "\t$tmpNMDinexflag\tUSSEDS\t$tmpSEupsteramCDSLen\t$tmpSEupsteramCDSAALen\n";
@@ -3309,7 +3310,7 @@ while (my $addSEres=<USDSRES>){
      $tmpSEupsteramCDSAALen= $tmpaddSEres[43];
     $tmpSEupsteramCDSAALen =~ s/\n//;
     unless($tmpSEupsteramCDSAALen eq ""){
-        $tmpSEupsteramCDSAALen=sprintf "%.1f",$tmpSEupsteramCDSAALen;
+        $tmpSEupsteramCDSAALen=sprintf("%.1f", $tmpSEupsteramCDSAALen);
     }
     print COMBINEDOUT "\t$tmpNMDinexflag\tUSDS\t$tmpSEupsteramCDSLen\t$tmpSEupsteramCDSAALen\n";
 
