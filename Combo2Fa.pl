@@ -30,7 +30,7 @@ or die("[-]Error in command line arguments
 open COMBOFA,"> $opfn.fa" or die ("[-] Error: Can't open or create $opfn.fa\n");
 open COMBOFASIMPLE,"> $opfn.simple.fa" or die ("[-] Error: Can't open or create $opfn.simple.fa\n");
 
-our $count = 0;
+our $count = 1;
 our @exonid = ();
 
 while(defined(our $seq = <>)){
@@ -40,9 +40,9 @@ while(defined(our $seq = <>)){
 
     }else{
         my @tmp = split("\t",$seq);
-        my $originName = "$tmp[0].$tmp[1].$tmp[2].$tmp[3].$count:$tmp[34]";
+        my $originName = "$tmp[0].$tmp[1]:$tmp[2].$tmp[3].$count:$tmp[9]:$tmp[10]:$tmp[28]:$tmp[31]:$tmp[34]";
         chomp $originName;
-        my $simpleexonid = "$tmp[0]:$tmp[3].$count:$tmp[34]"; # [3] transcript_id [34] SEupstreamAApos
+        my $simpleexonid = "$tmp[0]:$tmp[3]:$count:$tmp[9]:$tmp[10]:$tmp[28]:$tmp[31]:$tmp[34]"; # [3] transcript_id [34] SEupstreamAApos [9] SE/US position type. [10] SE length. [28] ORF type. [31] NMD flag
         chomp $simpleexonid;
         my $originNameSimple = $originName;
             $originNameSimple =~ s/@//g;
@@ -57,11 +57,20 @@ while(defined(our $seq = <>)){
             $afterAASeqSimple =~ s/_.*//;
             $afterAASeqSimple =~ s/\d*$//;
 
+            my $SEtype="rm_or_add_SE";
+
         unless($tmp[21] eq "" or $tmp[22] eq ""){
             unless($orgininAASeqSimple =~/_/){
-                print COMBOFA ">$originName.original\n$originAASeq\n>$originName.rm_or_add_SE\n$afterAASeq\n";
+                
+                if ($tmp[32] eq "USSEDS"){
+                    $SEtype = "rm_SE";
+
+                }elsif($tmp[32] eq "USDS"){
+                    $SEtype = "Add_SE"
+                }
+                print COMBOFA ">$originName.original\n$originAASeq\n>$originName.$SEtype\n$afterAASeq\n";
                 # print COMBOFASIMPLE ">$originNameSimple.original\n$orgininAASeqSimple\n>$originNameSimple.rm_or_add_SE\n$afterAASeqSimple\n";
-                print COMBOFASIMPLE ">$simpleexonid.original\n$orgininAASeqSimple\n>$simpleexonid.rm_or_add_SE\n$afterAASeqSimple\n";
+                print COMBOFASIMPLE ">$simpleexonid.original\n$orgininAASeqSimple\n>$simpleexonid.$SEtype\n$afterAASeqSimple\n";
                 $count++;
             }
         }
@@ -73,6 +82,7 @@ while(defined(our $seq = <>)){
 }
 close COMBOFA;
 close COMBOFASIMPLE;
+$count = $count -1;
 
 say "Done. $count records. $opfn.fa $opfn.simple.fa";
 
