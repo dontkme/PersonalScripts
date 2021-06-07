@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Transformat NMD combined result to Fasta file. (Combo2Fa)v0.15 2021/06/03
+# Transformat NMD combined result to Fasta file. (Combo2Fa)v0.16 2021/06/07
 # hukaining@gmail.com
 
 use strict;
@@ -24,11 +24,12 @@ or die("[-]Error in command line arguments
     options:
 	 [-o string|output prefix Default: Combined_fasta]
 	
-    Note: Transformat NMD combined result to Fasta file. (Combo2Fa)v0.15 2021/06/03\n");
+    Note: Transformat NMD combined result to Fasta file. (Combo2Fa)v0.16 2021/06/07\n");
 
 ############### Main ###########
 open COMBOFA,"> $opfn.fa" or die ("[-] Error: Can't open or create $opfn.fa\n");
 open COMBOFASIMPLE,"> $opfn.simple.fa" or die ("[-] Error: Can't open or create $opfn.simple.fa\n");
+open COMBOID,"> $opfn.ID.txt" or die ("[-] Error: Can't open or create $opfn.ID.txt\n");
 
 our $count = 1;
 our @exonid = ();
@@ -46,6 +47,7 @@ while(defined(our $seq = <>)){
         chomp $simpleexonid;
         my $originNameSimple = $originName;
             $originNameSimple =~ s/@//g;
+        my $count_and_ID = "$tmp[0].$tmp[1]";
         my $originAASeq = $tmp[21];
         my $orgininAASeqSimple = $originAASeq;
             $orgininAASeqSimple =~ s/_+$//;
@@ -71,6 +73,7 @@ while(defined(our $seq = <>)){
                 print COMBOFA ">$originName.original\n$originAASeq\n>$originName.$SEtype\n$afterAASeq\n";
                 # print COMBOFASIMPLE ">$originNameSimple.original\n$orgininAASeqSimple\n>$originNameSimple.rm_or_add_SE\n$afterAASeqSimple\n";
                 print COMBOFASIMPLE ">$simpleexonid.original\n$orgininAASeqSimple\n>$simpleexonid.$SEtype\n$afterAASeqSimple\n";
+                print COMBOID "$count\t$count_and_ID\n";
                 $count++;
             }
         }
@@ -82,7 +85,8 @@ while(defined(our $seq = <>)){
 }
 close COMBOFA;
 close COMBOFASIMPLE;
+close COMBOID;
 $count = $count -1;
 
-say "Done. $count records. $opfn.fa $opfn.simple.fa";
+say "Done. $count records. $opfn.fa $opfn.simple.fa $opfn.ID.txt";
 
