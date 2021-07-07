@@ -14,6 +14,7 @@ echo "#SBATCH --mem=8G" >>$short.sbatch
 echo "module load java" >>$short.sbatch
 echo "cd $i" >>$short.sbatch
 #echo "java -jar -Xmx8G ~/xczhang/KnHu/biosoft/picard. -F1 $file1 -F2 $file2 -O $short.unmapped.bam -SM $short -RG $short" >>$short.sbatch
-echo "${DropseqPATH}/DigitalExpression -I final.bam -O DGE.MG${MG}.out.txt -SUMMARY DGE.MG${MG}.summary.txt -MIN_NUM_GENES_PER_CELL ${MG}" >>$short.sbatch
+#echo "${DropseqPATH}/DigitalExpression -I final.bam -O DGE.MG${MG}.out.txt -SUMMARY DGE.MG${MG}.summary.txt -MIN_NUM_GENES_PER_CELL ${MG}" >>$short.sbatch
+echo "${DropseqPATH}/DigitalExpression I=final.bam O=DGE.MG${MG}.out.txt SUMMARY=DGE.MG${MG}.summary.txt MIN_NUM_GENES_PER_CELL=${MG}" >>$short.sbatch
 echo "sbatch $short.sbatch"
 done
