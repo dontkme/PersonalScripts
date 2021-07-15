@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome (Multiple Threads version)v1.340 2021/06/02
+# Get NMD transid from GTF and genome for MM10.EnsGene (Multiple Threads version)v1.345 2021/07/015
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GTF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance (Multiple Threads version)v1.340 2021/06/02.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance for MM10_ensGene(Multiple Threads version)v1.345 2021/07/15.\n");
 
 ###################sub TRseq##########
  
@@ -2768,9 +2768,25 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $addedSEseqlen = length($SEseq);
                     my $originCDSlen = $tmpaccOriginCDSlen{$transexonnumbers};
                     my $addSECDSlen = $tmpaccAddCDSlen{$transexonnumbers};
+                 ###### load originCDSexonseqLen   2021.07.15
+                    our $originCDSexonseqs = "";
+                    our $originCDSexonseqsLen = 0;
+
+                for (my $i1 =1; $i1<= $transexonnumbers; $i1++){ #### Get exons + CDS end seq and seq length.
+                   
+                    if ($i1 == $startcodon_exonnumber){               #### Get 1st CDS + +exons seq and seq length.
+                        $originCDSexonseqs .= $CDSseqs{$tmptransid}[$i1];
+                    }elsif($i1> $startcodon_exonnumber and $i1 <=$transexonnumbers){
+                        $originCDSexonseqs .= $exonseqs{$tmptransid}[$i1];
+                    }
+
+                }
+                   
+                    $originCDSexonseqsLen = length($originCDSexonseqs);
 
                     my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj. 2021.05.06
-                    $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{$transexonnumbers-1};
+                    # $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{$transexonnumbers-1}; # Bug fix 2021.07.15
+                    $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[$transexonnumbers]); ## Bug fix 2021.07.15
                     my $originCDSdj = 0;
                     $originCDSdj = $originCDSexonRmLastexonseqLen - ($originFullCDSlen + 3); ##### Bug fix +3 as a stop codon. 2021.06.02
                     my $flagOriginNMD ="-";
@@ -3022,8 +3038,25 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     my $originCDSlen = $tmpaccOriginCDSlen{1};  ### No. 1 as end of exon number. !!!
                     my $addSECDSlen = $tmpaccAddCDSlen{1};
 
+                    # # Fix bug 2021.07.15
+                    our $originCDSexonseqs = ""; # # Fix bug 2021.07.15
+                    our $originCDSexonseqsLen = 0; # # Fix bug 2021.07.15
+
+                    for (my $i1 = $transexonnumbers; $i1 >= 1; $i1--){ #### Get exons + CDS end seq and seq length. in Minus strand. # 2021.05.06
+                 
+                        if ($i1 == $stopcodon_exonnumber){               #### Get 1st CDS + +exons seq and seq length.
+                            $originCDSexonseqs .= $CDSseqs{$tmptransid}[$i1];
+                        }elsif($i1< $stopcodon_exonnumber and $i1 >= 1){
+                            $originCDSexonseqs .= $exonseqs{$tmptransid}[$i1];
+                        }
+
+                    }
+                # $originexonCDSseqsLen = length($originexonCDSseqs);
+                    $originCDSexonseqsLen = length($originCDSexonseqs); #### ##### 1. report value.
+
                     my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj in Minus strand. 2021.05.06
-                    $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{2}; # 2 
+                    # $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{2}; # 2 
+                    $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[1]); # 2 # Fix bug 2021.07.15
                     my $originCDSdj = 0;
                     $originCDSdj = $originCDSexonRmLastexonseqLen - ($originFullCDSlen + 3); #### Bug fix +3 as a stop codon. 2021.06.02
                     my $flagOriginNMD ="-";
