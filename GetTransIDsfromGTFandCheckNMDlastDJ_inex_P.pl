@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome for MM10.EnsGene (Multiple Threads version)v1.345 2021/07/015
+# Get NMD transid from GTF and genome for MM10.EnsGene (Multiple Threads version)v1.350 2021/07/20
 # hukaining@gmail.com
 
 use strict;
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GTF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance for MM10_ensGene(Multiple Threads version)v1.345 2021/07/15.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance for MM10_ensGene(Multiple Threads version)v1.350 2021/07/20.\n");
 
 ###################sub TRseq##########
  
@@ -3287,7 +3287,7 @@ say "Finished predicting. Start to combine results.";
 open USSEDSRES, "< $opfn.outUSSEDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSSEDStransid.txt\n");
 open USDSRES, "< $opfn.outUSDStransid.txt" or die ("[-] Error: Can't open $opfn.outUSDStransid.txt\n");
 open COMBINEDOUT, "> $opfn.outCombined.txt" or die ("[-] Error: Can't open or creat $opfn.outCombined.txt\n");
-print COMBINEDOUT "#QueryCol1\tSEUSDSCoordinates\tQueryCol3\tTranscript_id\tStrand\tExons\tStart_exon\tStop_exon\tSE_exon_Number\tSE(US)_Pos\tSE_length\tOri_CDS_length\tOri_Star_codon_to_exon_end_seq_len\trm/add_SE_start_to_end_seq_len";
+print COMBINEDOUT "QueryCol1\tSEUSDSCoordinates\tQueryCol3\tTranscript_id\tStrand\tExons\tStart_exon\tStop_exon\tSE_exon_Number\tSE(US)_Pos\tSE_length\tOri_CDS_length\tOri_Star_codon_to_exon_end_seq_len\trm/add_SE_start_to_end_seq_len";
 print COMBINEDOUT "\tSEseq\tOri_CDSexons_seq\trm/add_SE_CDSexons_seq\tOri_last_junction_pos\tOri_last_dj\tOri_NMD\tStart_codon\tOri_AA\trm/add_SE_AA";
 print COMBINEDOUT "\tAA_len+1\tOri_AA_1st_stop_pos\tOri_AA_stop_pos\tSEed_AA_1st_stop_pos\tSEed_AA_stop_pos\tFrame_shift_flag\tNew_1st_stop_pos_dj\tNMD_flag\tNMD_in/ex_flag\tsource\tSEupstreamCDS\tSEupstreamAApos\n";
 

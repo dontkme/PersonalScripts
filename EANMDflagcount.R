@@ -8,7 +8,7 @@ library(getopt)
 spec <- matrix(
 
   c("Output",  "o", 1, "character", "Output prefix",
-    "Rank", "r", 1, "character",  "flag rank",
+    #"Rank", "r", 1, "character",  "flag rank",
     "Input",  "i", 2, "character",  "Input combined file",
     "help",   "h", 0, "logical",  "Detail Help"),
   byrow=TRUE, ncol=5
@@ -25,15 +25,20 @@ if(is.null(opt$Output)){
 if( !is.null(opt$help) || is.null(opt$Input) || is.null(opt$Output) ){
   # ... 
   cat(paste(getopt(spec=spec, usage = T), "\n"))
+  
   quit()
 }
 
 
 
-TFNMD <- read.table(opt$Input,sep="\t",header = T)
- attach(TFNMD)
- TFNMD$key <- paste(QueryCol1,SEUSDSCoordinates,sep="_")
- sortedTFNMD <- TFNMD[order(QueryCol1,SEUSDSCoordinates,NMD_in.ex_flag),]
+# TFNMD <-read.csv(opt$Input,sep="\t",header = T,stringsAsFactors = F,comment.char = "")
+TFNMD <-read.table(opt$Input,sep="\t",header = T,stringsAsFactors = F)
+#TFNMD <-read.table(opt$Input,sep="\t",header = T,stringsAsFactors = F,comment.char = "")
+attach(TFNMD)
+ # TFNMD$key <- paste(TFNMD$X.QueryCol1,TFNMD$SEUSDSCoordinates,sep="_")
+ TFNMD$key <- paste(TFNMD$QueryCol1,TFNMD$SEUSDSCoordinates,sep="_")
+ # sortedTFNMD <- TFNMD[order(TFNMD$X.QueryCol1,TFNMD$SEUSDSCoordinates,TFNMD$NMD_in.ex_flag),]
+ sortedTFNMD <- TFNMD[order(TFNMD$QueryCol1,TFNMD$SEUSDSCoordinates,TFNMD$NMD_in.ex_flag),]
  keytable2<- table( sortedTFNMD$key,sortedTFNMD$NMD_in.ex_flag)
  # head(keytable2)
  keytable2outname <- paste(opt$Output,"Key2NMDex_in_table.txt",sep=".")
@@ -61,6 +66,7 @@ write.table(keytable2,file = keytable2outname,sep = "\t",col.names=NA)
   mallname <- paste(opt$Output,"FinalUniqNMDflag.txt",sep=".")
   names(mall) <- make.names(names(mall)) # make.names of safe column names
   mallnrow <- nrow(mall) # count number of rows
+  print(mallnrow)
   for (i in 1:mallnrow){
     if (mall$NMD_ex[i]>0 && mall$NMD_in[i]>0){
       mall$Finalflag[i]="NMD_ex_in"
@@ -68,7 +74,8 @@ write.table(keytable2,file = keytable2outname,sep = "\t",col.names=NA)
       mall$Finalflag[i]="NMD_ex"
     }else if(mall$NMD_ex[i]==0 && mall$NMD_in[i]>0){
       mall$Finalflag[i]="NMD_in"
-    }else if(mall$NMD_ex[i]==0 && mall$NMD_in[i]==0 && mall$Start_codon[i]>0){
+    # }else if(mall$NMD_ex[i]==0 && mall$NMD_in[i]==0 && mall$Start_codon[i]>0){
+    }else if( mall$Start_codon[i]>0){
       mall$Finalflag[i]="Start_codon"
     }else if(mall$X5UTR[i]>0 ){
       mall$Finalflag[i]="5UTR"
@@ -80,6 +87,12 @@ write.table(keytable2,file = keytable2outname,sep = "\t",col.names=NA)
       mall$Finalflag[i]="No_stop_codon"
     }else if(mall$Same.stop_codon.Need.check[i]>0){
       mall$Finalflag[i]="Same_stop_codon_Need_check"
+    }else if(mall$X3UTR[i]>0){
+      mall$Finalflag[i]="3UTR"
+    }else if(mall$Same.stop_codon[i]>0){
+      mall$Finalflag[i]="Same.stop_codon"
+    }else{
+      mall$Finalflag[i]="Other"
     }
   }
   
