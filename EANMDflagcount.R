@@ -2,7 +2,8 @@
 # combinefile <- commandArgs(trailingOnly = TRUE)
 # # print(c("combinefile: ", combinefile))
 # print(combinefile)
-
+###### EANMDflagcount.R v1.00
+##### Written by Kaining Hu 2021-07-20
 library(getopt)
 
 spec <- matrix(
@@ -98,6 +99,12 @@ write.table(keytable2,file = keytable2outname,sep = "\t",col.names=NA)
   
   write.table(mall,file=mallname,sep = "\t",col.names=NA)
   print(table(mall$Finalflag))
-
+  piedata <- as.data.frame(table(mall$Finalflag))
+  # piedata <- as.data.frame.matrix(table(mall$Finalflag))
+  piedataoutname <- paste(opt$Output,"FinalFlagPieData.txt",sep=".")
+  write.table(piedata,file=piedataoutname,sep = "\t",col.names=NA)
+  # print(piedata)
+  # library(RColorBrewer)
+  # myPalette <- brewer.pal(9, "Purples") 
   
   
