@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Get NMD transid from GTF and genome for MM10.EnsGene (Multiple Threads version)v1.351 2021/07/21
+# Get NMD transid from GTF and genome EANMD (GENCODE version)v1.351 2021/07/21
 # hukaining@gmail.com
 
 use strict;
@@ -33,7 +33,7 @@ our $dj = 50;
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
 GetOptions("o=s" => \$opfn, "p=i"=>\$MAX_processes, "d=i"=>\$dj, "g=s"=>\$annot,"f=s"=>\$feature,"s=s"=>\$sortID, "input|in=s"=>\$inputlist,"verbose"  => \$verbose)
 or die("[-]Error in command line arguments
-  Usage: perl GetTransIDsfromGTF [options] -g <string|GTF annoation file> -in <string|input rMATs type list> <input FASTA file(s)>
+  Usage: perl EANMD_GENCODE [options] -g <string|GTF annoation file> -in <string|input rMATs type list> <input FASTA file(s)>
     options:
     [-o string|outprefix Default: getseqsOut]
     [-p int |threads number Default: 1]
@@ -42,7 +42,7 @@ or die("[-]Error in command line arguments
     [-f string|Specify feature type in GTF annotation.default: '']
        
 	 
-    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance for MM10_ensGene(Multiple Threads version)v1.350 2021/07/20.\n");
+    Note: Get Transcript_id from GTF and genome, and check NMD using last junction distance. EANMD_GENCODE (Multiple Threads version)v1.351 2021/07/20.\n");
 
 ###################sub TRseq##########
  
@@ -113,10 +113,11 @@ our %Chrid2seq;
 while(defined(our $seq = <>)){
 
 	if ($seq =~ m/^.*>/) {
-	$seq=~ m/^.*>([a-zA-Z0-9_.-]+) ?.*/;
-	print "$1\n";
-	 $Chrname[$Chri]= $1;
-	$Chri++;
+	# $seq=~ m/^.*>([a-zA-Z0-9_.-]+) ?.*/;
+        $seq=~ m/^\s*>\s*(\S+)\s*(.*)/;
+        print "$1\n";
+        $Chrname[$Chri]= $1;
+        $Chri++;
 	}else{
 		$seq =~ s/\s//;
 		$seq =~ tr/MRWSYKVHDBmrwsykvhdb/CGTGCGGCGGCGTGCGGCGG/;#1.31add snp replace
@@ -161,7 +162,7 @@ sub getseq
         }elsif($_[4] eq "-"){
                
                 # my $finalseq="";
-                $finalseq= TRseq(substr($Chrid2seq{$seqchrid},$seqstartpos-1,$seqendpos-$seqstartpos+1));
+                $finalseq= TRseq(substr($Chrid2seq{$seqchrid},$seqstartpos-1,$seqendpos-$seqstartpos+1)); ##2021-07-06 GENCODE version.
                 # print OUT ">$faheadid"." $seqchrid:$seqstartpos..$seqendpos $plusminus\n";
                 # print OUT ">$sortkey\n";
                 # print OUT "$finalseq\n";
@@ -191,7 +192,8 @@ print "Feature: $feature\n";
 
 
 
-while(defined (our $inrow=<ANNOT>)){    ### Get CDS/Coding gene transcripts id.
+while(defined (my $inrow=<ANNOT>)){    ### Get CDS/Coding gene transcripts id.
+    if ($inrow =~ m/^\#+/) {next;}
     @tmp=();
     @tmp = split (/\t/,$inrow);
 
@@ -224,10 +226,11 @@ while(defined(our $inrow = <ANNOT>)){
 
     @tmp=();
 
-    if ($inrow =~ m/^\#/) {next;}
-    if ($annotcount > 1 and $annotcount % 100000 == 0){
-        print "Deal with $annotcount annotations.\n";
-    }
+    if ($inrow =~ m/^\#+/) {next;}
+    # if ($annotcount > 1 and $annotcount % 100000 == 0){
+    # if ($annotcount > 1 and $annotcount % 100000 == 0 ){
+    #     print "Deal with $annotcount annotations.\n";
+    # }
     
             @tmp = split (/\t/,$inrow);
             
@@ -247,7 +250,8 @@ while(defined(our $inrow = <ANNOT>)){
                     $gene_id = $1;
                     }elsif($tmp3 =~ m/transcript_id \"(\S+)\"/i){
                         $transcript_id = $1;            
-                    }elsif($tmp3 =~ m/exon_number \"(\d+)\"/i){
+                    #}elsif($tmp3 =~ m/exon_number \"(\d+)\"/i){ #GENCODE don't have "". 2021.07.02
+                    }elsif($tmp3 =~ m/exon_number (\d+)/i){ #GENCODE don't have "". 2021.07.02
                         $exon_number = $1 + 0;
                         # $exon_numberf3 = printf "%3.0f",$exon_number;
                         $exon_numberf3 = sprintf "%03d",$exon_number;
@@ -277,7 +281,12 @@ while(defined(our $inrow = <ANNOT>)){
             # our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos..$seqendpos:$plusminus";
             our $key = "$transcript_id.$gene_id.$annottype.ex.$exon_numberf3.$seqchrid:$seqstartpos-$seqendpos:$plusminus.$seqlen";
             $annotcount++;
+            
+            if ($annotcount > 1 and $annotcount % 100000 == 0 ){
+                print "Deal with $annotcount annotations.\n";  ###print counts. 2021-07-06
+            }
             # print "$key\n";
+
             $key2Chr{$key}=$seqchrid;
             $key2type{$key}=$annottype;
             $key2startpos{$key}=$seqstartpos;
@@ -300,7 +309,7 @@ while(defined(our $inrow = <ANNOT>)){
             
             if ($annottype eq "CDS"){
                 
-                if (!defined($trans_CDSstart{$transcript_id} ) or ($exon_number < $trans_CDSstart{$transcript_id}) ){
+                if (!defined($trans_CDSstart{$transcript_id} ) or ($exon_number < $trans_CDSstart{$transcript_id}) ){  
                     $trans_CDSstart{$transcript_id} = $exon_number;
                 }
 
@@ -535,62 +544,6 @@ sub seq2aa3rd {
 
 
 
-# open INPUTLIST, "< $inputlist" or die ("[-] Error: Can't open list file: $inputlist.\n"); # moved to head
-
-# open OUTSEQ, "> $opfn.outseq.txt" or die ("[-] Error: Can't open or creat $opfn.outseq.txt\n");
-
-# while(defined(our $inputline = <INPUTLIST>)){   # Skip the OUTSEQ. 2021-04-28
-#     if ($inputline =~ m/^\#/) {next;}
-   
-#     $inputline =~ s/\r\n// ;
-#         @tmp = split (/\t/,$inputline);
-      
-#         my $genename = $tmp[0];
-#         my @tmp2 =split (/@/,$tmp[1]);
-#         my @tmpSE =split (/\:/,$tmp2[0]);
-#         my @tmpUS =split (/\:/,$tmp2[1]);
-#         my @tmpDS =split (/\:/,$tmp2[2]);
-#         my ($SEchr, $SEstartpos, $SEendpos, $SEPM) = split (/\:/,$tmp2[0]);
-     
-#         my ($USchr, $USstartpos, $USendpos, $USPM) = split (/\:/,$tmp2[1]);
-#         my ($DSchr, $DSstartpos, $DSendpos, $DSPM) = split (/\:/,$tmp2[2]);
-
-#         my $USseq = getseq("$genename.UE",$USchr, $USstartpos+1, $USendpos, $USPM);
-#         my $SEseq = getseq("$genename.SE",$SEchr, $SEstartpos+1, $SEendpos, $SEPM);
-#         my $DSseq = getseq("$genename.DE",$DSchr, $DSstartpos+1, $DSendpos, $DSPM);
-#         my $Oriseq = "$USseq"."$SEseq"."$DSseq";
-#         my $SEedseq = "$USseq"."$DSseq";
-#         my $Oriseq1stFrameAA = seq2aa1st($Oriseq);
-#         my $SEedseq1stFrameAA = seq2aa1st($SEedseq);
-#         my $Oriseq1stFrameAACount = ($Oriseq1stFrameAA =~ tr/_/_/);
-        
-#         my $SEedseq1stFrameAACount =($SEedseq1stFrameAA =~ tr/_/_/);
-        
-#         my $Oriseq2edFrameAA = seq2aa2ed($Oriseq);
-#         my $SEedseq2edFrameAA = seq2aa2ed($SEedseq);
-#         my $Oriseq2edFrameAACount= ($Oriseq2edFrameAA =~ tr/_/_/);
-#         my $SEedseq2edFrameAACount =($SEedseq2edFrameAA =~ tr/_/_/);
-#         my $Oriseq3rdFrameAA = seq2aa3rd($Oriseq);
-#         my $SEedseq3rdFrameAA = seq2aa3rd($SEedseq);
-#         my $Oriseq3rdFrameAACount= ($Oriseq3rdFrameAA =~ tr/_/_/);
-#         my $SEedseq3rdFrameAACount =($SEedseq3rdFrameAA =~ tr/_/_/);
-
-#         print OUTSEQ "$inputline\t$USseq\t$SEseq\t$DSseq\t$Oriseq\t$SEedseq\t$Oriseq1stFrameAA\t$SEedseq1stFrameAA\t$Oriseq1stFrameAACount\t$SEedseq1stFrameAACount\t$Oriseq2edFrameAA\t$SEedseq2edFrameAA\t$Oriseq2edFrameAACount\t$SEedseq2edFrameAACount\t$Oriseq3rdFrameAA\t$SEedseq3rdFrameAA\t$Oriseq3rdFrameAACount\t$SEedseq3rdFrameAACount\n";
-
-
-
-# }
-
-# close OUTSEQ;
-
-# close INPUTLIST;  # Skip the OUTSEQ. 2021-04-28 END.
-
-
-
-# close OUTDOWN;
-# close OUTUP;
-# use Array::Utils qw(:all);
-# use List::MoreUtils ':all';
 
 open INPUTLIST, "< $inputlist" or die ("[-] Error: Can't open list file: $inputlist.\n");
 open OUTTRANSIDALL, "> $opfn.outtransid.txt" or die ("[-] Error: Can't open or create $opfn.outtransid.txt\n");
@@ -823,7 +776,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
             ###################### Start analysis
 
-            if ($transPM eq "+"){   ########## First analysis Plus strand.
+            # if ($transPM eq "+"){   ########## First analysis Plus strand.
 
                 our $originexonseqs = "";
                 our $removeSEexonseqs = ""; # initialize removed SE exons.
@@ -892,7 +845,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                 }
                 $originexonCDSseqsLen = length($originexonCDSseqs);
                 $originCDSexonseqsLen = length($originCDSexonseqs); #### ##### 1. report value.
-                our $originCDSexonRmLastexonseqLen = 0;  ####2. report value
+                my $originCDSexonRmLastexonseqLen = 0;  ####2. report value
                  
                 $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[$transexonnumbers]); ### Get penultimate CDS + exons seq length.
 
@@ -1721,839 +1674,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                     # print OUTUSSEDSTRANSID "\t$flag1\n"
                 }
 
-            }elsif($transPM eq "-"){ #---------------- #### 2021-04-26 ##### Because in MM10 ensemble GTF, exons number is count by +. The  - strand exons start with the largest number of exon No. So using $DStransexonnumber as boundary. Switch stopcodon_exonnumber and startcodon_exonnumber, $UStransexonnumber and $DStransexonnumber.
-
-                our $originexonseqs = "";
-                our $removeSEexonseqs = ""; 
-                # initialize removed SE exons.
-                our $originCDSexonseqs = "";
-                our $originCDSexonseqsLen = 0;
-                # our $originCDSexonRmLastexonseqLen = 0;
-                # our $originCDSdj=0;
-                # our $flagOriginNMD="-";
-
-                for (our $x = $transexonnumbers; $x >=1; $x--){ # Original Exon sequence and length.
-                    $originexonseqs .= $exonseqs{$tmptransid}[$x];
-                }
-
-                our $originexonseqsLen = length($originexonseqs);
-
-                my $outSEseq = $exonseqs{$tmptransid}[$setransexonid]; #SE sequence and length.
-                my $outSEseqlen = length($outSEseq);
-
-                
-                #### Removed-SE  transcript's exons sequence and length.
-                for (our $y = $transexonnumbers; $y > $setransexonid; $y--){ 
-                    $removeSEexonseqs .= $exonseqs{$tmptransid}[$y];
-                }
-
-                for (our $z = $setransexonid - 1 ; $z >=1; $z--){
-                    $removeSEexonseqs .= $exonseqs{$tmptransid}[$z];
-                }
-                my $removeSEexonseqsLen = length($removeSEexonseqs); 
-                
-
-                our $originCDSseqs = ""; #### Original reference CDS sequence and length. !!!!
-
-                for (our $x = $stopcodon_exonnumber; $x >= $startcodon_exonnumber; $x--){                 
-                    $originCDSseqs .= $CDSseqs{$tmptransid}[$x];
-                }
-
-                our $originCDSseqsLen = length($originCDSseqs);
-
-                for (my $i1 = $transexonnumbers; $i1 >= 1; $i1--){ #### Get exons + CDS end seq and seq length. in Minus strand. # 2021.05.06
-                    # if ($i1 > $stopcodon_exonnumber){
-                    #     $originexonCDSseqs .= $exonseqs{$tmptransid}[$i1];
-                    # }elsif($i1 == $stopcodon_exonnumber){
-                    #     $originexonCDSseqs .= $CDSseqs{$tmptransid}[$i1];
-                    # }
-
-                    if ($i1 == $stopcodon_exonnumber){               #### Get 1st CDS + +exons seq and seq length.
-                        $originCDSexonseqs .= $CDSseqs{$tmptransid}[$i1];
-                    }elsif($i1< $stopcodon_exonnumber and $i1 >= 1){
-                        $originCDSexonseqs .= $exonseqs{$tmptransid}[$i1];
-                    }
-
-
-                }
-                # $originexonCDSseqsLen = length($originexonCDSseqs);
-                $originCDSexonseqsLen = length($originCDSexonseqs); #### ##### 1. report value.
-                our $originCDSexonRmLastexonseqLen = 0;  ####2. report value
-                 
-                $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[1]);
-
-
-
-
-                our $final_1st_stopcodon_exon_number = "-"; ######## initialize report values.
-                our $final_1ststopcodon_accCDSlen = "-";
-                our $flag3 = "-";
-                our $flag4 = "-";
-                our $NewstopcodonPos= "-";
-                our $tmpdj = "-";
-                our $tmpdjlast ="-";
-                our $final_1st_stopcodon_exon_number_len = "-";
-
-                our $flagOriginNMD = "-";
-                our $flagEx_inNMD = "-";
-                our $originCDSdj = 0;
-
-                ### Tell wheather origin stop codon is a NMD signal. $dj.
-
-                $originCDSdj = $originCDSexonRmLastexonseqLen - ($originCDSseqsLen + 3); ####!!!!!! Bug fix $originCDSseqsLen + 3 nt (as stop_condon) 2021.06.02
-                if ($originCDSdj >= $dj){
-                    $flagOriginNMD ="NMD";
-                }elsif($originCDSdj<0){
-                    $flagOriginNMD ="Last_exon";
-                }
-
-                ###### Identify SE positons.
-
-                if ($setransexonid > $stopcodon_exonnumber){ # This stopcodon_exonnumber is the startcondon_exonnumber in - shrand. # 5UTR pass.
-
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\t5UTR";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen";
-
-                    for (1..27){
-                        print OUTUSSEDSTRANSID "\t";
-                    }
-                    print OUTUSSEDSTRANSID "\t\t\n";
-
-
-
-                }elsif($setransexonid>$startcodon_exonnumber and $setransexonid<$stopcodon_exonnumber){ ### SE is a inner exon.
-
-                    our $removeSECDSseqs = "";
-                    $removeSECDSseqs .= $CDSseqs{$tmptransid}[$stopcodon_exonnumber];
-                    $accCDSlength{$tmptransid}[$stopcodon_exonnumber] = length($removeSECDSseqs);
-
-                    for (our $y = $stopcodon_exonnumber - 1; $y > $setransexonid; $y--){
-                            $removeSECDSseqs .= $CDSseqs{$tmptransid}[$y];
-                            $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
-                    }
-
-                    # my $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
-                    my $removeSECDSseqs_upstreamLen = 0;
-                        $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
-                    my $removeSECDSseqsAA_upstreamLen = $removeSECDSseqs_upstreamLen/3;
-
-                    for (our $z = $setransexonid - 1 ; $z >= 1; $z--){ #Add rest exons.
-
-                            $removeSECDSseqs .= $exonseqs{$tmptransid}[$z];
-                            $accCDSlength{$tmptransid}[$z] = length($removeSECDSseqs);
-                    }
-
-                    my $removeSECDSseqsLen = length($removeSECDSseqs);  
-                    ########### Finished of loading DNA sequences.
-
-                    my $originCDSseqsAA = seq2aa1st($originCDSseqs);   ### Translate 2 AA.
-                    my $removeSEexonseqsAA = seq2aa1st($removeSECDSseqs);
-
-                    my $flagATG = "ATG";
-                    if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
-                        $flagATG = substr($originCDSseqs,0,3);
-                    }
-
-                    my $originCDSseqsAALen = length($originCDSseqsAA);
-
-                    my @removeSEexonseqsAA_Pos=();
-
-                    while ($removeSEexonseqsAA =~ m/_/gc){  #### Get SE-removed AA stop_codons as an array. 
-                        my $tmppos = pos($removeSEexonseqsAA);
-                        push (@removeSEexonseqsAA_Pos,$tmppos);
-                    }
-
-                    my $removeSEexonseqsAA_1stPos = $removeSEexonseqsAA_Pos[0];
-                    my $removeSEexonseqsAA_allPos = join(', ', @removeSEexonseqsAA_Pos);
-
-                    if (!defined($removeSEexonseqsAA_1stPos)){ ### To skip warnings of not initailized @.
-                        $removeSEexonseqsAA_1stPos= "Null";
-                        $removeSEexonseqsAA_allPos = "Null";
-                    }                    
-
-                    
-                    $originCDSseqsAA .= "_"; #originAA add an Stop_codon.
-
-                    my @originCDSseqsAA_Pos=();
-
-                    while ($originCDSseqsAA =~ m/_/gc){ # Original AA stop_codon array.
-
-                        my $tmppos = pos($originCDSseqsAA);
-                        push (@originCDSseqsAA_Pos,$tmppos);
-
-                    }
-
-                    my $originCDS_1stPos = $originCDSseqsAA_Pos[0];
-                    
-                    my $originCDS_allPos_allPos = join(', ', @originCDSseqsAA_Pos);
-
-
-                    my $flag1 = "";  #flag1 report removed-SE sequence 1st stop codon position feature.
-
-                    if($removeSEexonseqsAA_1stPos eq "Null"){                       
-                        $flag1 = "No stop_codon";
-                    }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Same stop_codon Need check";                  
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "ORF preserving";
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Downstream stop_codon";                       
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Upstream stop_codon";
-                    }
-
-
-                    if ($flag1 eq "Upstream stop_codon"){   ### Tell NMD.
-
-                        $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ;                   
-
-                        for (my $a = $stopcodon_exonnumber; $a >= 1; $a--){ #### scan CDS + exons.
-                            my $tmplen=0; 
-                            if ($a == $setransexonid){   ###pass SE exon.
-                                next;
-                            } 
-
-                            if ($a == $stopcodon_exonnumber){   # Get 1st CDS and rest exons length as $tmplen.
-                                $tmplen = $CDSsLength{$tmptransid}[$a];
-                            }else{
-                                $tmplen = $exonsLength{$tmptransid}[$a];  
-                            }
-
-                            if (($NewstopcodonPos >= $accCDSlength{$tmptransid}[$a] - $tmplen) and ($NewstopcodonPos <= $accCDSlength{$tmptransid}[$a])){ # search 1st stopcodon length range.
-
-                                $final_1st_stopcodon_exon_number_len = $tmplen;
-                                $final_1st_stopcodon_exon_number = $a;
-                                $tmpdj = $accCDSlength{$tmptransid}[$a] - $NewstopcodonPos;
-
-                                if ($setransexonid == 2){ ##### tell penultimate exon.
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[3] - $NewstopcodonPos;
-                                }else{
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[2] - $NewstopcodonPos;
-                                }
-
-                                $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$a];
-
-                                if ($final_1st_stopcodon_exon_number == 1){ #### Last exonnumber: 1
-                                    $flag3 = "Last_exon";                            
-                                }elsif($tmpdj>= $dj){
-                                    $flag3 = "NMD";  ############### NMD dj <= 50 rules.
-                                }
-
-                                if($tmpdjlast >= $dj){
-                                    $flag4 = "NMD";
-                                }elsif($tmpdjlast <= 0){
-                                    $flag4 = "Last_exon";
-                                }                               
-
-                            }
-                        }
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                        }else{
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }
-
-                    }elsif ($flag1 eq "Downstream stop_codon"){
-
-                        $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ;
-                        for (my $a = $stopcodon_exonnumber; $a >= 1; $a--){ #### scan CDS + exons.
-                            my $tmplen=0; 
-                            if ($a == $setransexonid){   ###pass SE exon.
-                                next;
-                            } 
-
-                            if ($a == $stopcodon_exonnumber){   # Get 1st CDS and rest exons length as $tmplen.
-                                $tmplen = $CDSsLength{$tmptransid}[$a];
-                            }else{
-                                $tmplen = $exonsLength{$tmptransid}[$a];  
-                            }
-
-                            if (($NewstopcodonPos >= $accCDSlength{$tmptransid}[$a] - $tmplen) and ($NewstopcodonPos <= $accCDSlength{$tmptransid}[$a])){ # search 1st stopcodon length range.
-
-                                $final_1st_stopcodon_exon_number_len = $tmplen;
-                                $final_1st_stopcodon_exon_number = $a;
-                                $tmpdj = $accCDSlength{$tmptransid}[$a] - $NewstopcodonPos;
-
-                                if ($setransexonid == 2){ ##### tell penultimate exon.
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[3] - $NewstopcodonPos;
-                                }else{
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[2] - $NewstopcodonPos;
-                                }
-
-                                $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$a];
-
-                                if ($final_1st_stopcodon_exon_number == 1){ #### Last exonnumber: 1
-                                    $flag3 = "Last_exon";                            
-                                }elsif($tmpdj>= $dj){
-                                    $flag3 = "NMD";  ############### NMD dj <= 50 rules.
-                                }
-
-                                if($tmpdjlast >= $dj){
-                                    $flag4 = "NMD";
-                                }elsif($tmpdjlast <= 0){
-                                    $flag4 = "Last_exon";
-                                }                               
-
-                            }
-                        }
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                        }else{
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }
-
-                    }elsif ($flag1 eq "ORF preserving"){
-                        $flag4 = $flagOriginNMD;
-                        $flagEx_inNMD = "No_info";
-                    }
-
-
-                    #End loaded CDS + exons.
-                    
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tInner_exon";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
-                    print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
-                    print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\t$removeSECDSseqs_upstreamLen\t$removeSECDSseqsAA_upstreamLen\n";
-
-
-                
-                    # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tinner_exon\n";
-
-
-                }elsif($setransexonid == $stopcodon_exonnumber){ ##### SE cotain Start_codon. Nedd Find longest ORF. Minus Strand.!!! -
-                    my $removeSEexonsseq = "";
-                    my $OriginExonsseq = "";
-                    my $OriginCDSsseq = "";
-
-                    my @tmpAccrmSEExons = ();
-                    my @tmpAccOriginExons =();
-                    my $tmpSEseq = $exonseqs{$tmptransid}[$setransexonid];
-                    my $tmpSElen = length($tmpSEseq);
-
-                    for (my $ii = $transexonnumbers; $ii >= 1 ; $ii--){
-
-                        if($ii == $setransexonid){                                ##### Get original full-length exons and removed SE's exons.
-                            $OriginExonsseq .= $exonseqs{$tmptransid}[$ii];
-                        }else{
-                            $OriginExonsseq .= $exonseqs{$tmptransid}[$ii];
-                            $removeSEexonsseq .= $exonseqs{$tmptransid}[$ii];
-                        }
-
-                        $tmpAccrmSEExons[$ii] = length($removeSEexonsseq);
-                        $tmpAccOriginExons[$ii] = length($OriginExonsseq);
-
-                    }
-
-                
-                    for (my $jj = $stopcodon_exonnumber; $jj >= $startcodon_exonnumber; $jj--){
-                            $OriginCDSsseq .= $CDSseqs{$tmptransid}[$jj]; #### Get Original CDS full length.
-                            # $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
-                    }
-
-                    my $OriginExonsseqLen = length($OriginExonsseq);      ## Get 3 type sequences' length.
-                    my $removeSEexonsseqLen = length($removeSEexonsseq);
-                    my $OriginCDSsseqLen = length($OriginCDSsseq);
-
-                    ############## Find longest ORF!!!!!!!!!!
-                    # my $originCDSseqs="";
-                    my $removeSECDSseqs = "";
-                    # my $originCDSseqsLen = "";
-                    my $removeSECDSseqsLen = "";
-                    
-                    # my $OriginExonsseqAA_1st = seq2aa1st($OriginExonsseq);
-                    # my $OriginExonsseqAA_2st = seq2aa2st($OriginExonsseq);
-                    # my $OriginExonsseqAA_3st = seq2aa3st($OriginExonsseq);
-                    my $OriginCDSsseqAA_1st = seq2aa1st($OriginCDSsseq);  ### Original AA.
-
-
-                    my $removeSEexonsseqAA_1st = seq2aa1st($removeSEexonsseq); # predicted 3 ORFs.
-                    my $removeSEexonsseqAA_2ed = seq2aa2ed($removeSEexonsseq);
-                    my $removeSEexonsseqAA_3rd = seq2aa3rd($removeSEexonsseq);
-
-                    my $tmpLongestORF_AA = "";
-                    my $tmpLongestORF_AALen = 0; ### Rule for tell the longest ORF.
-                    my $tmpLongestORF_AApos = "";
-                    # my @tmpORFs_1st = ();
-                    # my @tmpORFAAendPos_1st =();
-                    # my @tmpORFAAStartPos_1st =();
-                    # my @tmpORFendPos_1st =();
-                    # my @tmpORFStartPos_1st =();
-                    my %tmpORFseqPos; # {0, 1, 2, 3} => AA start Pos, AA end Pos, DNA start Pos, DNA end Pos;
-
-                    # say "1st Fullseqs: $removeSEexonsseqAA_1st";
-                    while($removeSEexonsseqAA_1st =~ m/(M[A-Z]*(_|$))/gc){
-                        # say "1st: $1";
-                        my $tmpmatchLen = length($1);
-                        # push (@tmpORFs_1st, $1);
-                        # push(@tmpORFendPos_1st,pos($removeSEexonsseqAA_1st)*3);                    
-                        # push(@tmpORFStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3);   
-                        $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_1st)-$tmpmatchLen;
-                        $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_1st);
-                        $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_1st)-$tmpmatchLen)*3;
-                        $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_1st)*3;                    
-                        # push(@tmpORFAAendPos_1st,pos($removeSEexonsseqAA_1st));                    
-                        # push(@tmpORFAAStartPos_1st, (pos($removeSEexonsseqAA_1st)-$tmpmatchLen));                    
-                        
-                        if (length($1)>$tmpLongestORF_AALen){
-                            $tmpLongestORF_AA = $1;
-                            $tmpLongestORF_AALen = length($1);  # Comparations to get the Longest ORF.
-                        }
-                    }
-
-                    # my @tmpORFs_2ed = ();
-                    # my @tmpORFendPos_2ed =();
-                    # my @tmpORFStartPos_2ed =();
-                    # my @tmpORFAAendPos_2ed =();
-                    # my @tmpORFAAStartPos_2ed =();
-                    
-                    # say "2st Fullseqs: $removeSEexonsseqAA_2ed";
-
-                    while($removeSEexonsseqAA_2ed =~ m/(M[A-Z]*(_|$))/gc){
-                        # say "2ed $1";
-                        my $tmpmatchLen = length($1);
-                        # push(@tmpORFs_2ed, $1);
-                        # push(@tmpORFendPos_2ed,pos($removeSEexonsseqAA_2ed)*3+1);
-                        # push(@tmpORFStartPos_2ed, (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1 ); 
-                        # push(@tmpORFAAendPos_2ed,pos($removeSEexonsseqAA_2ed));
-                        # push(@tmpORFAAStartPos_2ed, pos($removeSEexonsseqAA_2ed)-$tmpmatchLen);   
-                        $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_2ed)-$tmpmatchLen;
-                        $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_2ed);
-                        $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_2ed)-$tmpmatchLen)*3 +1;
-                        $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_2ed)*3 +1;                     
-                        
-                        if (length($1)>$tmpLongestORF_AALen){
-                            $tmpLongestORF_AA = $1;
-                            $tmpLongestORF_AALen = length($1);
-
-                        }
-                    }
-
-                    # my @tmpORFs_3rd = ();
-                    # my @tmpORFendPos_3rd =();
-                    # my @tmpORFStartPos_3rd =();
-                    # my @tmpORFAAendPos_3rd =();
-                    # my @tmpORFAAStartPos_3rd =();
-
-                    # say "3rd Fullseqs: $removeSEexonsseqAA_3rd";
-                    
-                    while($removeSEexonsseqAA_3rd =~ m/(M[A-Z]*(_|$))/gc){
-                        # say "3rd $1";
-                        my $tmpmatchLen = length($1);
-                        # push(@tmpORFs_3rd, $1);
-                        # push(@tmpORFendPos_3rd,pos($removeSEexonsseqAA_3rd)*3+2);
-                        # push(@tmpORFStartPos_3rd, (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2 ); 
-                        # push(@tmpORFAAendPos_3rd,pos($removeSEexonsseqAA_3rd));
-                        # push(@tmpORFAAStartPos_3rd, pos($removeSEexonsseqAA_3rd)-$tmpmatchLen); 
-                        $tmpORFseqPos{$1}[0]= pos($removeSEexonsseqAA_3rd)-$tmpmatchLen;
-                        $tmpORFseqPos{$1}[1] = pos($removeSEexonsseqAA_3rd);
-                        $tmpORFseqPos{$1}[2] = (pos($removeSEexonsseqAA_3rd)-$tmpmatchLen)*3 +2;
-                        $tmpORFseqPos{$1}[3] = pos($removeSEexonsseqAA_3rd)*3 +2;                    
-                        
-                        if (length($1)>$tmpLongestORF_AALen){
-                            $tmpLongestORF_AA = $1;
-                            $tmpLongestORF_AALen = length($1);
-
-                        }
-                    }
-
-                    # say "$tmptransid Longest ORFAA $tmpLongestORF_AALen $tmpLongestORF_AA";
-                    # my $LongestORF_AA_start = $tmpORFseqPos{$tmpLongestORF_AA}[0];
-                    # my $LongestORF_AA_end = $tmpORFseqPos{$tmpLongestORF_AA}[1];
-                    # my $LongestORF_DNA_start = $tmpORFseqPos{$tmpLongestORF_AA}[2];
-                    # my $LongestORF_DNA_end = $tmpORFseqPos{$tmpLongestORF_AA}[3];
-                    # $removeSECDSseqsLen = $tmpLongestORF_AALen*3;
-                    # $removeSECDSseqs = substr($removeSEexonsseq,$LongestORF_DNA_start,$removeSECDSseqsLen);
-
-                    # my $flagATG = "ATG";
-                    # if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
-                    #     # next;
-                    #     $flagATG = substr($originCDSseqs,0,3);
-                    # }
-
-                    # my $originCDSseqsAA = $OriginCDSsseqAA_1st;
-                    # my $originCDSseqsAALen = length($OriginCDSsseqAA_1st);
-                    # my $removeSEexonseqsAA = $tmpLongestORF_AA;
-
-                ##### Nedd additional codes.
-
-
-                    my $LongestORF_AA_start = "";
-                    my $LongestORF_AA_end = "";
-                    my $LongestORF_DNA_start = "";
-                    my $LongestORF_DNA_end = "";
-                    my $flagATG = "ATG";
-
-                    if ($tmpLongestORF_AA ne ""){
-                        $LongestORF_AA_start = $tmpORFseqPos{$tmpLongestORF_AA}[0];
-                        $LongestORF_AA_end = $tmpORFseqPos{$tmpLongestORF_AA}[1];
-                        $LongestORF_DNA_start = $tmpORFseqPos{$tmpLongestORF_AA}[2];
-                        $LongestORF_DNA_end = $tmpORFseqPos{$tmpLongestORF_AA}[3];
-                        $removeSECDSseqsLen = $tmpLongestORF_AALen*3;
-                        $removeSECDSseqs = substr($removeSEexonsseq,$LongestORF_DNA_start,$removeSECDSseqsLen);
-                    }
-
-                    if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
-                        # next;
-                        $flagATG = substr($originCDSseqs,0,3);
-                    }
-
-                    my $originCDSseqsAA = $OriginCDSsseqAA_1st;
-                    my $originCDSseqsAALen = length($OriginCDSsseqAA_1st);
-                    my $removeSEexonseqsAA = $tmpLongestORF_AA;
-
-                    #clac the distence of SE-removed exons 1st stop to last junction.
-                    my $flag4 ="-";
-                    my $flag3= "-";
-                    my $final_1st_stopcodon_exon_number ="-";
-                    my $NewstopcodonPos =  $LongestORF_DNA_end;
-                    my $flag1 = "-";
-
-                    if ($tmpLongestORF_AA !~ /_/){
-                        $flag1 = "No stop_codon";
-                    }
-
-                    if ($tmpLongestORF_AA eq ""){
-                        $flag1 = "No M_ AA";
-                    }
-                    my $tmpdjlast ="-";
-
-
-                    #  $tmpdjlast = $tmpAccrmSEExons[$transexonnumbers-1] - $LongestORF_DNA_end;
-                    if ($tmpLongestORF_AA ne ""){
-                        if ($setransexonid == 2){
-                            $tmpdjlast = $tmpAccrmSEExons[3] - $LongestORF_DNA_end;
-                        }else {
-                            $tmpdjlast = $tmpAccrmSEExons[2] - $LongestORF_DNA_end;
-                        }
-
-                        if ($tmpdjlast <=0){
-                            $flag3 = "Last_exon";
-                        }elsif($tmpdjlast>= $dj){
-                            $flag4 = "NMD";
-                        }
-
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                        }else{
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }
-
-                    }
-                    
-
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tStart_codon";
-                    print OUTUSSEDSTRANSID "\t$tmpSEseq\t$OriginExonsseq\t$removeSEexonsseq\t$tmpSElen\t$OriginExonsseqLen\t$removeSEexonsseqLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
-                    # print OUTUSSEDSTRANSID "\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\n"; #\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos\n";
-                    print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t-\t-\t-\t-";
-                    # print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\n";
-                    print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t-\t-\t-\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\t\t\n";
-                    # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstart_codon\n";
-
-                }elsif($setransexonid < $startcodon_exonnumber){ ## SE in 3UTR. Minus strand. swith $startcodon_exonnumber and $stopcondon_exonnumber.
-
-                    our $removeSECDSseqs = $CDSseqs{$tmptransid}[$stopcodon_exonnumber];
-                    $accCDSlength{$tmptransid}[$stopcodon_exonnumber] = length($removeSECDSseqs);
-
-                    for (our $y = $stopcodon_exonnumber -1 ; $y > $setransexonid; $y--){
-                            $removeSECDSseqs .= $exonseqs{$tmptransid}[$y];
-                            $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs);
-                    }
-
-                    # my $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
-                    my $removeSECDSseqs_upstreamLen = 0;
-                        $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
-                    my $removeSECDSseqsAA_upstreamLen = $removeSECDSseqs_upstreamLen/3;
-
-                    for (our $z = $setransexonid - 1 ; $z >= 1; $z--){
-                            $removeSECDSseqs .= $exonseqs{$tmptransid}[$z];
-                            $accCDSlength{$tmptransid}[$z] = length($removeSECDSseqs);
-                    }
-
-                    my $removeSECDSseqsLen = length($removeSECDSseqs); 
-
-                    my $originCDSseqsAA = seq2aa1st($originCDSseqs);   ### Translate 2 AA. !!!
-                    my $removeSEexonseqsAA = seq2aa1st($removeSECDSseqs);
-                    my $flagATG = "ATG";
-                    if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if not ATG as start codon
-                        # next;
-                        $flagATG = substr($originCDSseqs,0,3);
-                    }
-
-                    my $originCDSseqsAALen = length($originCDSseqsAA);
-
-                    my @removeSEexonseqsAA_Pos=();
-
-                    while ($removeSEexonseqsAA =~ m/_/gc){  #### Get SE-removed AA stop_codons. 
-                        my $tmppos = pos($removeSEexonseqsAA);
-                        push (@removeSEexonseqsAA_Pos,$tmppos);
-                    }
-
-                    my $removeSEexonseqsAA_1stPos = $removeSEexonseqsAA_Pos[0];
-                    my $removeSEexonseqsAA_allPos = join(', ', @removeSEexonseqsAA_Pos);
-
-                    if (!defined($removeSEexonseqsAA_1stPos)){ ### Skip warnings.
-                        $removeSEexonseqsAA_1stPos= "Null";
-                        $removeSEexonseqsAA_allPos = "Null";
-                    }                    
-                
-                    $originCDSseqsAA .= "_"; #originAA add an Stop_codon.
-
-                    my @originCDSseqsAA_Pos=();
-
-                    while ($originCDSseqsAA =~ m/_/gc){ # Original AA stop_codon array.
-                        my $tmppos = pos($originCDSseqsAA);
-                        push (@originCDSseqsAA_Pos,$tmppos);
-                    }
-
-                    my $originCDS_1stPos = $originCDSseqsAA_Pos[0];              
-                    my $originCDS_allPos_allPos = join(', ', @originCDSseqsAA_Pos);
-
-
-                    my $flag1 = "";  #flag1 tell
-                    if($removeSEexonseqsAA_1stPos eq "Null"){                       
-                        $flag1 = "No stop_codon";
-                    }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        # $flag1 = "Need check";                    
-                        $flag1 = "Same stop_codon";                    
-                    # }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        # $flag1 = "Same stop_codon";
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Downstream stop_codon";                       
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Upstream stop_codon";
-                    }
-                    
-                    if ($flag1 ne "No stop_codon"){
-                        $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ; ### Test PTC 
-                        
-                        for (my $a = $stopcodon_exonnumber; $a >= 1; $a--){  #### Scan CDS+exons.
-                            my $tmplen = 0; 
-                            if ($a == $setransexonid){
-                                next;
-                            } 
-
-                            if ($a == $stopcodon_exonnumber){
-                                $tmplen = $CDSsLength{$tmptransid}[$a];
-                            }else{
-                                $tmplen = $exonsLength{$tmptransid}[$a];
-                            }
-                                # say "NewstopcodonPos $NewstopcodonPos";
-                                # say "acc $accCDSlength{$tmptransid}[$a]";
-                                # say "templen $tmplen";
-                            if (($NewstopcodonPos >= ($accCDSlength{$tmptransid}[$a] - $tmplen)) and ($NewstopcodonPos <= $accCDSlength{$tmptransid}[$a])){ # search 1st stopcodon length range.
-
-                                $final_1st_stopcodon_exon_number_len = $tmplen;
-                                $final_1st_stopcodon_exon_number = $a;
-                                $tmpdj = $accCDSlength{$tmptransid}[$a] - $NewstopcodonPos;
-                                if ($setransexonid == 2){                                       ## penultimate exon. 2
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[3] - $NewstopcodonPos;
-                                }else{
-                                $tmpdjlast = $accCDSlength{$tmptransid}[2] - $NewstopcodonPos;
-                                }
-
-                                $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$a];
-
-                                if ($final_1st_stopcodon_exon_number == 1){ ################ Last exon number: 1.
-                                    $flag3 = "Last_exon";                       
-                                }elsif($tmpdj>= $dj){
-                                    $flag3 = "NMD";  ############### NMD dj <= 50 rules.
-                                }
-
-                                if($tmpdjlast >= $dj){
-                                    $flag4 = "NMD";
-                                }elsif($tmpdjlast <= 0){
-                                    $flag4 = "Last_exon";
-                                }
-                                
-                            }
-                        }
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                        }else{
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }
-
-                    }
-
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\t3UTR";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
-                    print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
-                    print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\t$removeSECDSseqs_upstreamLen\t$removeSECDSseqsAA_upstreamLen\n";
-                    
-
-                    # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\t3UTR\n";
-                }elsif($setransexonid == $startcodon_exonnumber){ ### The - strand. This $startcodon_exonnumber is the stopcodon_number.
-
-                    our $removeSECDSseqs = "";
-                    $removeSECDSseqs = $CDSseqs{$tmptransid}[$stopcodon_exonnumber]; #load 1st CDS exon.
-                    $accCDSlength{$tmptransid}[$stopcodon_exonnumber] = length($removeSECDSseqs); # acc 1st CDS.
-
-
-                    for (our $y = $stopcodon_exonnumber - 1 ; $y > $setransexonid; $y--){
-                            $removeSECDSseqs .= $exonseqs{$tmptransid}[$y];  # Add rest exons before SE exon.
-                            $accCDSlength{$tmptransid}[$y] = length($removeSECDSseqs); # Accumulate 1st CDS and exons length.
-                    }
-
-                    # my $removeSECDSseqs_upstreamLen = length($removeSECDSseqs); 
-                    my $removeSECDSseqs_upstreamLen = 0;
-                        $removeSECDSseqs_upstreamLen = length($removeSECDSseqs);
-                    my $removeSECDSseqsAA_upstreamLen = $removeSECDSseqs_upstreamLen/3; 
-
-                    for (our $z = $setransexonid - 1 ; $z >=1; $z--){
-                            $removeSECDSseqs .= $exonseqs{$tmptransid}[$z];               ### Skip SE. Continue to add rest exons after SE, if they exits.
-                            $accCDSlength{$tmptransid}[$z] = length($removeSECDSseqs);
-                    }
-
-                    my $removeSECDSseqsLen = length($removeSECDSseqs); 
-
-                    my $originCDSseqsAA = seq2aa1st($originCDSseqs);   ### Translate 2 AA.
-                    my $removeSEexonseqsAA = seq2aa1st($removeSECDSseqs);
-                    my $flagATG = "ATG";
-                    if (substr($originCDSseqs,0,3) ne "ATG"){  ######### if not ATG as start codon
-                        $flagATG = substr($originCDSseqs,0,3);
-                    }
-
-                    my $originCDSseqsAALen = length($originCDSseqsAA);
-                    my @removeSEexonseqsAA_Pos=();
-
-
-                    while ($removeSEexonseqsAA =~ m/_/gc){  #### Get SE-removed AA stop_codons. 
-                        my $tmppos = pos($removeSEexonseqsAA);
-                        push (@removeSEexonseqsAA_Pos,$tmppos);
-                    }
-
-                    my $removeSEexonseqsAA_1stPos = $removeSEexonseqsAA_Pos[0];
-                    my $removeSEexonseqsAA_allPos = join(', ', @removeSEexonseqsAA_Pos);
-
-                    if (!defined($removeSEexonseqsAA_1stPos)){ # Skip warnings.
-                        $removeSEexonseqsAA_1stPos= "Null";
-                        $removeSEexonseqsAA_allPos = "Null";
-                    }                    
-                    
-                    $originCDSseqsAA .= "_"; #originAA add an Stop_codon.
-
-                    my @originCDSseqsAA_Pos=();
-
-                    while ($originCDSseqsAA =~ m/_/gc){ # Original AA stop_codon array.
-                        my $tmppos = pos($originCDSseqsAA);
-                        push (@originCDSseqsAA_Pos,$tmppos);
-                    }
-
-                    my $originCDS_1stPos = $originCDSseqsAA_Pos[0];               
-                    my $originCDS_allPos_allPos = join(', ', @originCDSseqsAA_Pos);
-
-                    my $flag1 = "";  #flag1 tell
-                    if($removeSEexonseqsAA_1stPos eq "Null"){                        
-                        $flag1 = "No stop_codon";
-                    }elsif ($originCDS_1stPos == $removeSEexonseqsAA_1stPos){
-                        $flag1 = "Same stop_codon Need check";                    
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) == ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "ORF preserving";
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) < ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Downstream stop_codon";                        
-                    }elsif(($originCDS_1stPos * 3 - $outSEseqlen ) > ($removeSEexonseqsAA_1stPos * 3)){
-                        $flag1 = "Upstream stop_codon";
-                    }
-
-                    if ($flag1 ne "No stop_codon"){ # Skip warnings.
-
-                        $NewstopcodonPos = $removeSEexonseqsAA_1stPos * 3 ; ### Test PTC                    
-
-                        for (my $as = $stopcodon_exonnumber; $as >= 1; $as--){ # Scan exons.
-                            my $tmplen=0; 
-                            if ($as == $setransexonid){
-                                next;
-                            } 
-
-                            if ($as == $stopcodon_exonnumber){
-                                $tmplen = $CDSsLength{$tmptransid}[$as];
-                            }else{
-                                $tmplen = $exonsLength{$tmptransid}[$as];
-                            }
-
-                            if (($NewstopcodonPos >= $accCDSlength{$tmptransid}[$as] - $tmplen) and ($NewstopcodonPos <= $accCDSlength{$tmptransid}[$as])){ # search 1st stopcodon length range.
-
-                                $final_1st_stopcodon_exon_number_len = $tmplen;
-                                $final_1st_stopcodon_exon_number = $as;
-                                $tmpdj = $accCDSlength{$tmptransid}[$as] - $NewstopcodonPos;
-
-                                if ($setransexonid == 2){                                    # Panultimate exons.
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[3] - $NewstopcodonPos;
-                                }else{
-                                    $tmpdjlast = $accCDSlength{$tmptransid}[2] - $NewstopcodonPos;
-                                }
-
-                                $final_1ststopcodon_accCDSlen = $accCDSlength{$tmptransid}[$as];
-
-                                if ($final_1st_stopcodon_exon_number == 1){ #tell Last exon.
-                                    $flag3 = "Last_exon";                     
-                                }elsif($tmpdj>= $dj){
-                                    $flag3 = "NMD";  ############### NMD dj <= 50 rules.
-                                }
-
-                                if($tmpdjlast >= $dj){
-                                    $flag4 = "NMD";
-                                }elsif($tmpdjlast <= 0){
-                                    $flag4 = "Last_exon";
-                                }                          
-
-                            }
-                        }
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                        }else{
-                            if ($flag4 eq "NMD"){
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }
-
-                    }
-
-
-
-
-                    print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$stopcodon_exonnumber\t$startcodon_exonnumber\tStop_codon";
-                    print OUTUSSEDSTRANSID "\t$outSEseq\t$originexonseqs\t$removeSEexonseqs\t$outSEseqlen\t$originexonseqsLen\t$removeSEexonseqsLen\t$originCDSseqs\t$removeSECDSseqs\t$originCDSseqsLen\t$removeSECDSseqsLen";
-                    print OUTUSSEDSTRANSID "\t$originCDSexonseqsLen\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originCDSseqsAA\t$removeSEexonseqsAA\t$originCDSseqsAALen\t$originCDS_1stPos\t$originCDS_allPos_allPos\t$removeSEexonseqsAA_1stPos\t$removeSEexonseqsAA_allPos";
-                    print OUTUSSEDSTRANSID "\t$flag1\t$final_1st_stopcodon_exon_number\t$NewstopcodonPos\t$final_1ststopcodon_accCDSlen\t$final_1st_stopcodon_exon_number_len\t$tmpdj\t$flag3\t$tmpdjlast\t$flag4\t$flagEx_inNMD\t$removeSECDSseqs_upstreamLen\t$removeSECDSseqsAA_upstreamLen\n";
-    
-                    # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$transPM\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\tstop_codon\n";
-                }
-
-            }    
+            # }  
             # print OUTUSSEDSTRANSID "$inputline\t$tmptransid\t$setransexonid\t$transexonnumbers\t$startcodon_exonnumber\t$stopcodon_exonnumber\n";
             
 
@@ -2563,7 +1684,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
         
         
         ###########################################################
-        ############### Start Add SE between US and DS. ###########
+        ############### Start Add SE between US and DS. ###########   ##2021-07-06 GENCODE version.
         ###########################################################
         foreach my $tmptransid(@noSEtransid){   
             our @tmpexonkeys=();
@@ -2627,8 +1748,13 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
 
 
+                if ($transPM eq "-"){
+                    my $tmpExNum = $DStransexonnumber;
+                    $DStransexonnumber = $UStransexonnumber; #### #### 2021-07-06 GENCODE simple version. Because of rMATs input exon order, switch DS and US exon number.
+                    $UStransexonnumber = $tmpExNum;
+                }
 
-            my $innerExonsofUSandDS = $DStransexonnumber - $UStransexonnumber -1;
+            my $innerExonsofUSandDS = abs($DStransexonnumber - $UStransexonnumber) -1;  #### 2021-07-06 GENCODE simple version.
 
 
             if ($innerExonsofUSandDS == 0){
@@ -2638,27 +1764,42 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
                 # my $DSexonstartpos = $exonendPos{$tmptransid}[$DStransexonnumber];
 
                 for(my $tmpexonnumber = $UStransexonnumber; $tmpexonnumber < $DStransexonnumber; $tmpexonnumber++){
-                    my $tmpexonsatrtpos = $exonstartPos{$tmptransid}[$tmpexonnumber];
+                    my $tmpexonstartpos = $exonstartPos{$tmptransid}[$tmpexonnumber];
                     my $tmpexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber];
                     # my $tmpbeforeexonendpos = $exonendPos{$tmptransid}[$tmpexonnumber - 1];
                     my $tmpnextExonstartpos = $exonstartPos{$tmptransid}[$tmpexonnumber+1];
+                    my $tmpnextExonendpos = $exonendPos{$tmptransid}[$tmpexonnumber+1];
 
-                    # if(($SEstartpos > $tmpbeforeexonendpos ) and ($SEendpos < $tmpexonsatrtpos)){
+                    # if(($SEstartpos > $tmpbeforeexonendpos ) and ($SEendpos < $tmpexonstartpos)){
                     #     $SEtransexonumber = $tmpexonnumber - 0.5;
                     # }
+                    if($transPM eq "+"){
 
-                    if($SEstartpos > $tmpexonendpos and $SEendpos < $tmpnextExonstartpos){
-                        $SEtransexonumber = $tmpexonnumber + 0.5;
-                        next;
+                        if($SEstartpos > $tmpexonendpos and $SEendpos < $tmpnextExonstartpos){
+                            $SEtransexonumber = $tmpexonnumber + 0.5;
+                            next;
+                        }
+
+                        if(($SEstartpos >= $tmpexonstartpos and $SEstartpos <= $tmpexonendpos) or ($SEendpos >= $tmpexonstartpos and $SEendpos <= $tmpexonendpos) or ($SEstartpos <= $tmpexonstartpos and $SEendpos >= $tmpexonendpos)){
+                            $SEtransexonumber = "$tmpexonnumber";
+                            # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
+                            # # print OUTUSDSTRANSID "\t$flag1\n";
+                            # print OUTUSDSTRANSID "\n";
+                            #  last;
+                        } 
+                    }elsif($transPM eq "-"){ #### 2021-07-06 GENCODE simple version.
+
+                        if($SEendpos < $tmpexonstartpos and $SEstartpos > $tmpnextExonendpos){
+                            $SEtransexonumber = $tmpexonnumber + 0.5;
+                            next;
+                        }
+
+                        if(($SEendpos >= $tmpexonstartpos and $SEendpos <= $tmpexonendpos) or ($SEstartpos >= $tmpexonstartpos and $SEstartpos <= $tmpexonendpos) or ($SEstartpos <= $tmpexonstartpos and $SEendpos >= $tmpexonendpos)){
+                            $SEtransexonumber = "$tmpexonnumber";
+                           
+                        } 
+
                     }
-
-                    if(($SEstartpos >= $tmpexonsatrtpos and $SEstartpos <= $tmpexonendpos) or ($SEendpos >= $tmpexonsatrtpos and $SEendpos <= $tmpexonendpos) or ($SEstartpos <= $tmpexonsatrtpos and $SEendpos >= $tmpexonendpos)){
-                        $SEtransexonumber = "$tmpexonnumber";
-                        # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$UStransexonnumber\t$DStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$startcodon_exonnumber\t$stopcodon_exonnumber";
-                        # # print OUTUSDSTRANSID "\t$flag1\n";
-                        # print OUTUSDSTRANSID "\n";
-                        #  last;
-                    } 
                     
 
                 }
@@ -2667,7 +1808,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
             my $flag1="-";
 
             #First analysis Plus strand.
-            if ($transPM eq "+"){
+            # if ($transPM eq "+"){
 
                 if ($startcodon_exonnumber > $UStransexonnumber){
                     $flag1 = "5UTR";
@@ -2759,34 +1900,34 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
                     my $originFullCDS="";
                     my $originFullCDSlen="";
+
                     for (my $tmpk =$startcodon_exonnumber; $tmpk <= $stopcodon_exonnumber; $tmpk ++){
                         $originFullCDS .= $CDSseqs{$tmptransid}[$tmpk];
 
                     }
                     $originFullCDSlen = length($originFullCDS);    #### original CDSs length.
 
+                    my $originCDSexonseqs="";
+                    my $originCDSexonseqsLen="";
+                    
+                    for (my $tmpz =$startcodon_exonnumber; $tmpz <= $transexonnumbers; $tmpz ++){
+                        if ($tmpz == $startcodon_exonnumber){
+                            $originFullCDS .= $CDSseqs{$tmptransid}[$tmpz];
+
+                        }else{
+                            $originFullCDS .= $exonseqs{$tmptransid}[$tmpz];
+                        }
+
+                    }
+                    $originCDSexonseqsLen = length($originCDSexonseqs);    #### original CDSs length.
+
                     my $addedSEseqlen = length($SEseq);
                     my $originCDSlen = $tmpaccOriginCDSlen{$transexonnumbers};
                     my $addSECDSlen = $tmpaccAddCDSlen{$transexonnumbers};
-                 ###### load originCDSexonseqLen   2021.07.15
-                    our $originCDSexonseqs = "";
-                    our $originCDSexonseqsLen = 0;
-
-                for (my $i1 =1; $i1<= $transexonnumbers; $i1++){ #### Get exons + CDS end seq and seq length.
-                   
-                    if ($i1 == $startcodon_exonnumber){               #### Get 1st CDS + +exons seq and seq length.
-                        $originCDSexonseqs .= $CDSseqs{$tmptransid}[$i1];
-                    }elsif($i1> $startcodon_exonnumber and $i1 <=$transexonnumbers){
-                        $originCDSexonseqs .= $exonseqs{$tmptransid}[$i1];
-                    }
-
-                }
-                   
-                    $originCDSexonseqsLen = length($originCDSexonseqs);
 
                     my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj. 2021.05.06
-                    # $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{$transexonnumbers-1}; # Bug fix 2021.07.15
-                    $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[$transexonnumbers]); ## Bug fix 2021.07.15
+                    # $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{$transexonnumbers-1};
+                    $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[$transexonnumbers]);
                     my $originCDSdj = 0;
                     $originCDSdj = $originCDSexonRmLastexonseqLen - ($originFullCDSlen + 3); ##### Bug fix +3 as a stop codon. 2021.06.02
                     my $flagOriginNMD ="-";
@@ -2941,273 +2082,7 @@ for (my $pid =1; $pid<=$MAX_processes; $pid++){     ############################
 
 
 
-            }elsif($transPM eq "-"){ ##### Because in MM10 ensemble GTF, exons number is count by +. The  - strand exons start with the largest number of exon No. So using $DStransexonnumber as boundary. Switch stopcodon_exonnumber and startcodon_exonnumber, $UStransexonnumber and $DStransexonnumber.
-                                    ######################### 2021-04-26
-
-                if ($stopcodon_exonnumber < $DStransexonnumber){ # $stopcodon_exonnumber is the startcodon_exonnumber in minus strand.
-                    $flag1 = "5UTR";
-                    my $addedSEseqlen = length($SEseq);
-                    print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t\t\t\t$SEseq\t";
-                    for (1..24){
-                        print OUTUSDSTRANSID "\t";
-                    }
-                    print OUTUSDSTRANSID "\t\t\n";
-                    next;
-
-                }else{
-
-                    if ($startcodon_exonnumber == $DStransexonnumber){
-                        $flag1 = "Stop_codon";
-                    }elsif($DStransexonnumber < $startcodon_exonnumber){
-                        $flag1 = "3UTR";
-                    }elsif($DStransexonnumber > $startcodon_exonnumber and $DStransexonnumber <= $stopcodon_exonnumber){
-                        $flag1 = "Start or inner exons";
-                    }
-
-                    ##### ADD SE sequence. start CDS + rest exons.
-                    my %tmpaccOriginCDSlen;
-                    my %tmpaccAddCDSlen;
-                    my $tmpOriginCDS="";
-                    my $tmpAddCDS="";
-                    my %tmpexonlen;
-
-                    for (my $tmpi = $stopcodon_exonnumber; $tmpi > $SEtransexonumber; $tmpi--){
-                        my $tmpseq="";
-                        if ($tmpi == $stopcodon_exonnumber){
-                            $tmpseq = $CDSseqs{$tmptransid}[$tmpi];
-                        }else{
-                            $tmpseq = $exonseqs{$tmptransid}[$tmpi];
-                        }
-
-                        $tmpOriginCDS .=$tmpseq;
-                        $tmpAddCDS .= $tmpseq;
-                        $tmpaccOriginCDSlen{$tmpi} = length($tmpOriginCDS);
-                        $tmpaccAddCDSlen{$tmpi} = length($tmpAddCDS); 
-                        $tmpexonlen{$tmpi} = length($tmpseq);
-
-                    }
-
-                    my $AddSECDSseqs_upstreamLen = 0;  ########### 2021.06.02 Add SE upstream CDS/AA sequence length.
-                    my $AddSECDSseqsAA_upstreamLen = 0;
-                    $AddSECDSseqs_upstreamLen = length($tmpAddCDS);
-                    $AddSECDSseqsAA_upstreamLen = $AddSECDSseqs_upstreamLen/3; ###### End ##### 2021.06.02 Add SE upstream CDS/AA sequence length.
-
-
-                    $tmpAddCDS .= $SEseq; ### Add SE in the middle.
-                    $tmpaccAddCDSlen{$SEtransexonumber} = length($tmpAddCDS); 
-                    $tmpexonlen{$SEtransexonumber} = length($SEseq);
-
-                    # my $point = $SEtransexonumber % 1;
-                    # my $point = $SEtransexonumber - int($SEtransexonumber);
-                    # say $point;
-                    if($SEtransexonumber - int($SEtransexonumber)== 0.5){ 
-
-                        for (my $tmpj = $SEtransexonumber - 0.5; $tmpj >= 1; $tmpj-- ){ ### Add rest exons.
-                            my $tmpseq="";
-                            $tmpseq = $exonseqs{$tmptransid}[$tmpj];
-                            $tmpOriginCDS .=$tmpseq;
-                            $tmpAddCDS .= $tmpseq;
-                            $tmpaccOriginCDSlen{$tmpj} = length($tmpOriginCDS);
-                            $tmpaccAddCDSlen{$tmpj} = length($tmpAddCDS); 
-                            $tmpexonlen{$tmpj} = length($tmpseq);
-
-                        }
-                    }else{
-
-                        for (my $tmpj = $SEtransexonumber - 1; $tmpj >=1; $tmpj-- ){ ### Add rest exons.
-                            my $tmpseq="";
-                            $tmpseq = $exonseqs{$tmptransid}[$tmpj];
-                            $tmpOriginCDS .=$tmpseq;
-                            $tmpAddCDS .= $tmpseq;
-                            $tmpaccOriginCDSlen{$tmpj} = length($tmpOriginCDS);
-                            $tmpaccAddCDSlen{$tmpj} = length($tmpAddCDS); 
-                            $tmpexonlen{$tmpj} = length($tmpseq);
-                        }
-                    }
-
-                    my $originFullCDS="";
-                    my $originFullCDSlen="";
-                    for (my $tmpk =$stopcodon_exonnumber; $tmpk >= $startcodon_exonnumber; $tmpk --){
-                        $originFullCDS .= $CDSseqs{$tmptransid}[$tmpk];
-
-                    }
-                    $originFullCDSlen = length($originFullCDS);
-
-                    my $addedSEseqlen = length($SEseq);
-                    my $originCDSlen = $tmpaccOriginCDSlen{1};  ### No. 1 as end of exon number. !!!
-                    my $addSECDSlen = $tmpaccAddCDSlen{1};
-
-                    # # Fix bug 2021.07.15
-                    our $originCDSexonseqs = ""; # # Fix bug 2021.07.15
-                    our $originCDSexonseqsLen = 0; # # Fix bug 2021.07.15
-
-                    for (my $i1 = $transexonnumbers; $i1 >= 1; $i1--){ #### Get exons + CDS end seq and seq length. in Minus strand. # 2021.05.06
-                 
-                        if ($i1 == $stopcodon_exonnumber){               #### Get 1st CDS + +exons seq and seq length.
-                            $originCDSexonseqs .= $CDSseqs{$tmptransid}[$i1];
-                        }elsif($i1< $stopcodon_exonnumber and $i1 >= 1){
-                            $originCDSexonseqs .= $exonseqs{$tmptransid}[$i1];
-                        }
-
-                    }
-                # $originexonCDSseqsLen = length($originexonCDSseqs);
-                    $originCDSexonseqsLen = length($originCDSexonseqs); #### ##### 1. report value.
-
-                    my $originCDSexonRmLastexonseqLen =0;     ##### Tell Original CDS NMD signal $dj in Minus strand. 2021.05.06
-                    # $originCDSexonRmLastexonseqLen = $tmpaccOriginCDSlen{2}; # 2 
-                    $originCDSexonRmLastexonseqLen = $originCDSexonseqsLen - length($exonseqs{$tmptransid}[1]); # 2 # Fix bug 2021.07.15
-                    my $originCDSdj = 0;
-                    $originCDSdj = $originCDSexonRmLastexonseqLen - ($originFullCDSlen + 3); #### Bug fix +3 as a stop codon. 2021.06.02
-                    my $flagOriginNMD ="-";
-                    if ($originCDSdj >= $dj){
-                        $flagOriginNMD = "NMD";
-                    }elsif($originCDSdj <= 0){
-                        $flagOriginNMD = "Last_exon";
-                    }
-
-
-                    ########### Finished of loading DNA sequences.
-
-                    my $originCDSseqsAA = seq2aa1st($tmpOriginCDS);   ### Translate 2 AA.
-                    my $AddSEexonseqsAA = seq2aa1st($tmpAddCDS);
-                    my $originFullCDSAA = seq2aa1st($originFullCDS);
-
-                    # my $ATGtest= substr($originCDSseqs,0,3);
-                    # say $ATGtest;
-                    my $flagATG = "ATG";
-                    if (substr($originFullCDS,0,3) ne "ATG"){  ######### if orignial CDS not have 'ATG' as start codon. Next 2021-04-14
-                        # next;
-                        $flagATG = substr($originFullCDS,0,3);
-                    }
-
-                    my $originFullCDSAA_Len = length($originFullCDSAA);
-
-                    my @AddSEexonseqsAA_stopPos=();
-
-
-                    while ($AddSEexonseqsAA =~ m/_/gc){  #### Get SE-removed AA stop_codons as an array. 
-
-                        my $tmppos = pos($AddSEexonseqsAA);
-                        push (@AddSEexonseqsAA_stopPos,$tmppos);
-
-                    }
-
-                    my $AddSEexonseqsAA_1stPos = $AddSEexonseqsAA_stopPos[0];
-                    my $AddSEexonseqsAA_allPos = join(', ', @AddSEexonseqsAA_stopPos);
-
-                    if (!defined($AddSEexonseqsAA_1stPos)){
-                        $AddSEexonseqsAA_1stPos= "Null";
-                        $AddSEexonseqsAA_allPos = "Null";
-
-                    }                    
-
-                    #### Full length CDS
-                    $originFullCDSAA .= "_"; #originAA add an Stop_codon.
-
-                    my @originFullCDSAA_Pos=();
-
-                    while ($originFullCDSAA =~ m/_/gc){ # Original AA stop_codon array.
-
-                        my $tmppos = pos($originFullCDSAA);
-                        push (@originFullCDSAA_Pos,$tmppos);
-
-                    }
-
-                    my $originFullCDSAA_1stPos = $originFullCDSAA_Pos[0];
-                    
-                    my $originFullCDSAA_allPos = join(', ', @originFullCDSAA_Pos);
-
-                    ##### CDS + exons
-                    my @originCDSseqsAA_Pos=();  ## Original CDS and exons stop codon.
-
-                    while ($originCDSseqsAA =~ m/_/gc){ # Original AA stop_codon array.
-
-                        my $tmppos = pos($originCDSseqsAA);
-                        push (@originCDSseqsAA_Pos,$tmppos);
-
-                    }
-
-                    my $originCDSseqsAA_1stPos = "-";
-                    if (defined $originCDSseqsAA_Pos[0]){
-                    $originCDSseqsAA_1stPos = $originCDSseqsAA_Pos[0];
-                    }
-                    
-                    my $originCDSseqsAA_allPos = "-";
-                    $originCDSseqsAA_allPos = join(', ', @originCDSseqsAA_Pos);
-
-
-                    my $flag2 ="-";
-                    if ($AddSEexonseqsAA_1stPos ne "Null"){    ###### 
-                        if ($originFullCDSAA_1stPos == $AddSEexonseqsAA_1stPos){
-                            $flag2 = "Same stop_codon";
-                        }elsif($AddSEexonseqsAA_1stPos * 3 == $originFullCDSAA_1stPos *3 + $addedSEseqlen){
-                            $flag2 = "ORF preserving";
-                        }elsif($AddSEexonseqsAA_1stPos * 3  > $originFullCDSAA_1stPos *3 + $addedSEseqlen){
-                            $flag2 = "Downstream stop_codon";
-                        }elsif($AddSEexonseqsAA_1stPos *3 < $originFullCDSAA_1stPos *3 + $addedSEseqlen){
-                            $flag2 = "Upstream stop_codon";
-                        }
-                    }else{
-                        $flag2 = "No stop_codon";
-                    }
-                    my $lastJpos = "-";
-                    my $flagnmd = "-";
-                    my $lastdj= "-";
-                    my $lastexonlen = $exonsLength{$tmptransid}[1]; ### No. 1 as end of exons.
-                    my $totallenofAddCDSlen = $tmpaccAddCDSlen{1};
-                    my $addedSEDNA1stPos ="";
-                    my $flagEx_inNMD ="-";
-                    if ($AddSEexonseqsAA_1stPos ne "Null"){
-                        $addedSEDNA1stPos = $AddSEexonseqsAA_1stPos * 3;
-                    }
-
-                    if ($SEtransexonumber == 2 or $SEtransexonumber == 1.5){  ########## Tell last Junction.
-                        $lastJpos = $tmpaccAddCDSlen{$SEtransexonumber};
-                    }else{
-                        $lastJpos = $tmpaccAddCDSlen{2};
-                    }
-
-                    if ($addedSEDNA1stPos ne ""){
-
-                        $lastdj = $lastJpos - $addedSEDNA1stPos ; # Caculate the lastdj.
-
-                        if ($addedSEDNA1stPos > $totallenofAddCDSlen - $lastexonlen and $addedSEDNA1stPos <= $totallenofAddCDSlen){
-                            $flagnmd = "Last_exon";
-
-                        }elsif($lastdj >= $dj){
-                            $flagnmd ="NMD";
-                        }
-
-                        if ($flagOriginNMD eq "NMD"){
-                            if ($flagnmd eq "NMD"){
-                                $flagEx_inNMD = "No_info";
-                            }else{
-                                $flagEx_inNMD = "NMD_ex";
-                            }
-                        }else{
-                            if ($flagnmd eq "NMD"){
-                                $flagEx_inNMD = "NMD_in";
-                            }
-                            if ($flagnmd eq $flagOriginNMD){
-                                $flagEx_inNMD = "No_info";
-                            }
-                        }
-
-                    }
-
-                    
-                    
-
-                    print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
-                    print OUTUSDSTRANSID "\t$flag1\t$addedSEseqlen\t$originFullCDSlen\t$originCDSlen\t$addSECDSlen\t$SEseq\t$originFullCDS\t$tmpOriginCDS\t$tmpAddCDS";
-                    print OUTUSDSTRANSID "\t$originCDSexonRmLastexonseqLen\t$originCDSdj\t$flagOriginNMD\t$flagATG\t$originFullCDSAA\t$originCDSseqsAA\t$AddSEexonseqsAA\t$originFullCDSAA_1stPos\t$originFullCDSAA_allPos\t$originCDSseqsAA_1stPos\t$originCDSseqsAA_allPos\t$AddSEexonseqsAA_1stPos\t$AddSEexonseqsAA_allPos";
-                    print OUTUSDSTRANSID "\t$flag2\t$addedSEDNA1stPos\t$lastJpos\t$lastdj\t$totallenofAddCDSlen\t$lastexonlen\t$flagnmd\t$flagEx_inNMD\t$AddSECDSseqs_upstreamLen\t$AddSECDSseqsAA_upstreamLen\n";
-
-                    # print OUTUSDSTRANSID "$inputline\t$tmptransid\t$transPM\t$transexonnumbers\t$DStransexonnumber\t$UStransexonnumber\t$innerExonsofUSandDS\t$SEtransexonumber\t$stopcodon_exonnumber\t$startcodon_exonnumber";
-                    # print OUTUSDSTRANSID "\t$flag1\n";
-                }
-            }
+            # }
 
 
             # print OUTUSDSTRANSID "$inputline\t$tmptransid\n" 
