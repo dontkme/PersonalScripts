@@ -21,10 +21,10 @@ echo "#SBATCH --output=$short.out" >>$short.sbatch
 echo "#SBATCH --error=$short.err" >>$short.sbatch
 echo "#SBATCH --partition=broadwl" >>$short.sbatch
 echo "#SBATCH --ntasks=2" >>$short.sbatch
-echo "#SBATCH --mem=4G" >>$short.sbatch
+echo "#SBATCH --mem=16G" >>$short.sbatch
 
 echo "module load java">>$short.sbatch
-echo "java -jar /home/kaininghu/xczhang/KnHu/biosoft/Trimmomatic-0.39/trimmomatic-0.39.jar SE -threads 2 -phred33 $file1 $cleanfile ILLUMINACLIP:/home/kaininghu/xczhang/KnHu/biosoft/Trimmomatic-0.39/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36" >>$short.sbatch
+echo "java -jar /home/kaininghu/xczhang/KnHu/biosoft/Trimmomatic-0.39/trimmomatic-0.39.jar SE -threads 2 -phred33 $file1 $cleanfile ILLUMINACLIP:/home/kaininghu/xczhang/KnHu/biosoft/Trimmomatic-0.39/adapters/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36" >>$short.sbatch
 echo "sbatch $short.sbatch"
 
 done
