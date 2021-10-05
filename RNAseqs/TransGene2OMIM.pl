@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2021
-# Translate Gene Symbol to OMIM annotation v1.00 2021/10/05.
+# Translate Gene Symbol to OMIM annotation v1.01 2021/10/05.
 # hukaining@gmail.com
 
 use strict;
@@ -23,7 +23,7 @@ or die("[-] Error in command line arguments
     options:
 	 [-o string|output prefix Default: TransGene2OMIM.out]
 
-    Note: Translate Gene Symbol to OMIM annotation v1.00 2021/10/05.\n");
+    Note: Translate Gene Symbol to OMIM annotation v1.01 2021/10/05.\n");
 
 ### Loading OMIM annotations.
 if (not @ARGV) {
@@ -110,13 +110,15 @@ print "=========================================================================
 
 ###### Start annotation.
 $loadingstarttime=time();
-print "Start annotaion.\n";
+print "Start annotation.\n";
 my $header = join("\t", "Chromosome\tGenomic Position Start\tGenomic Position End\tCyto Location\tComputed Cyto Location\tMIM Number\tGene Symbols\tGene Name\tApproved Gene Symbol\tEntrez Gene ID\tEnsembl Gene ID\tComments\tPhenotypes\tMouse Gene Symbol/ID");
 # print OUT "$header\n";
 our $count3=0;
 our $count4=0;
 while (defined(my $line = <>)){
-    chomp($line);
+    # chomp($line);
+    $line =~ s/\R//g;
+
     if ($line =~ m/^#/){ # Skip '#' Lines.
         next;
     }
