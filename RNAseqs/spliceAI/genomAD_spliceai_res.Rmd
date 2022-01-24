@@ -1,0 +1,104 @@
+---
+title: "SpliceAI results R Notebook"
+output:
+  html_notebook: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+## Loading libraries
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(DataExplorer)
+```
+## Loading simple splicAI results.
+```{r} 
+NMD_inspliceai <- read.table("Test3_NMD_inAS449.region2.gnomad.All.splicai.D4000.spliceai_res.txt",sep="\t",header = T)
+NMD_exspliceai <- read.table("Test3_NMD_exAS968.region2.gnomad.All.splicai.D4000.spliceai_res.txt",header=T)
+```
+
+
+```{r} 
+knitr::kable(
+  NMD_inspliceai[1:5, ], 
+  caption = "NMD_in[1:5,]."
+)
+knitr::kable(
+  NMD_exspliceai[1:5, ], 
+  caption = "NMD_e[1:5,]."
+)
+```
+## Separate the [SpliceAI] column.
+```{r}
+NMD_inspliceai <- NMD_inspliceai %>% separate(SpliceAI, sep="\\|",remove = F,into = c("Alts","Gene","AG","AL","DG","DL","DP_AG","DP_AL","DP_DG","DP_DL"),convert = T) 
+NMD_exspliceai <- NMD_exspliceai %>% separate(SpliceAI, sep="\\|",remove = F,into = c("Alts","Gene","AG","AL","DG","DL","DP_AG","DP_AL","DP_DG","DP_DL"),convert = T) 
+```
+## mutate max DS
+```{r}
+# NMD_inspliceai$AG <- as.numeric(NMD_inspliceai$AG)
+# NMD_inspliceai$AL <- as.numeric(NMD_inspliceai$AL)
+# NMD_inspliceai$DG <- as.numeric(NMD_inspliceai$DG)
+# NMD_inspliceai$DL <- as.numeric(NMD_inspliceai$DL)
+NMD_inspliceai <- NMD_inspliceai %>% mutate(MaxDS=pmax(AG,AL,DG,DL))
+NMD_exspliceai <- NMD_exspliceai %>% mutate(MaxDS=pmax(AG,AL,DG,DL))
+```
+## Filter max DS greater than 0.5
+```{r}
+NMD_inMaxDSGt_0.5<- NMD_inspliceai %>% filter(MaxDS>=0.5) 
+NMD_inMaxDSGt_0.5Gene<- NMD_inspliceai %>% filter(MaxDS>=0.5) %>% distinct(Gene)
+```
+
+```{r include=FALSE}
+create_report(NMD_inspliceai,output_file = "NMD_inspliceai_report.html")
+
+```
+
+```{r}
+count(NMD_inMaxDSGt_0.5Gene)
+
+# summarise(NMD_inspliceai)
+hist(NMD_inspliceai$MaxDS)
+# hist(NMD_inspliceai %>% filter(MaxDS>=0.1))
+hist(NMD_inMaxDSGt_0.5$MaxDS)
+create_report(NMD_inMaxDSGt_0.5, output_file = "NMD_inMaxDSGt_0.5_report.html")
+```
+
+```{r}
+NMD_exMaxDSGt_0.5<- NMD_exspliceai %>% filter(MaxDS>=0.5) 
+NMD_exMaxDSGt_0.5Gene<- NMD_exspliceai %>% filter(MaxDS>=0.5) %>% distinct(Gene)
+```
+
+```{r include=FALSE}
+create_report(NMD_exspliceai,output_file = "NMD_ex_report.html")
+
+```
+
+```{r}
+count(NMD_exMaxDSGt_0.5Gene)
+
+hist(NMD_exspliceai$MaxDS)
+hist(NMD_exMaxDSGt_0.5$MaxDS)
+create_report(NMD_exMaxDSGt_0.5, output_file = "NMD_exMaxDSGt_0.5_report.html")
+```
+
+
+## Output: write tables
+```{r}
+write.table(NMD_inMaxDSGt_0.5,"NMD_inMaxDSGt_0.5.txt",sep="\t",col.names = NA)
+write.table(NMD_inMaxDSGt_0.5Gene,"NMD_inMaxDSGt_0.5.Gene.txt",sep="\t",col.names = NA)
+
+write.table(NMD_exMaxDSGt_0.5,"NMD_exMaxDSGt_0.5.txt",sep="\t",col.names = NA)
+write.table(NMD_exMaxDSGt_0.5Gene,"NMD_exMaxDSGt_0.5.Gene.txt",sep="\t",col.names = NA)
+```
+
+
+
+
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
