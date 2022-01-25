@@ -97,8 +97,23 @@ write.table(NMD_exMaxDSGt_0.5Gene,"NMD_exMaxDSGt_0.5.Gene.txt",sep="\t",col.name
 ```
 
 
+## Overlap of intron length less than 10K
+.. Loding Introns and SE length less than 10KB Gene Symbols.
+```{r}
+NMD_inIntronLT10K_Gene <- read.table("Test3.4_NMD_in_intronsLT10K_312.txt",header = T)
+NMD_exIntronLT10K_Gene <- read.table("Test3.4_NMD_ex_intronsLT10K_621.txt",header = T)
+```
+
+```{r}
+NMD_inMaxDSGt_0.5_intronLT10K<- left_join(NMD_inIntronLT10K_Gene,NMD_inMaxDSGt_0.5,by="Gene")
+NMD_exMaxDSGt_0.5_intronLT10K<- left_join(NMD_exIntronLT10K_Gene,NMD_exMaxDSGt_0.5,by="Gene")
+```
+## Write tables.
+```{r}
+write.table(NMD_inMaxDSGt_0.5_intronLT10K,"NMD_inMaxDS_GT0.5_intronLT10K.txt",sep="\t",col.names = NA)
+write.table(NMD_exMaxDSGt_0.5_intronLT10K,"NMD_exMaxDS_GT0.5_intronLT10K.txt",sep="\t",col.names = NA)
+```
 
 
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
 
