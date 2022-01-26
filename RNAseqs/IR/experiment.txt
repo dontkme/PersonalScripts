@@ -1,0 +1,9 @@
+SampleNames	Condition
+S001_pR203_rep1	WT
+S001_pR203_rep2	WT
+S002_pR004_rep1	WT
+S002_pR004_rep2	WT
+S003_pR281_rep1	WT
+S003_pR281_rep2	WT
+S083_pR281_rep1	WT
+S083_pR281_rep2	WT

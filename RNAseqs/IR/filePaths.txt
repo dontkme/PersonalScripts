@@ -1,0 +1,8 @@
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S001-pR203.rep1.od/IRFinder-IR-dir.txt
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S001-pR203.rep2.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S002-pR004.rep1.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S002-pR004.rep2.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S003-pR281.rep1.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S003-pR281.rep2.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S083-pR281.rep1.od/IRFinder-IR-dir.txt 
+/Users/kaininghu/HKN/0Postdoc/202201/IR/IRFinder_res/S083-pR281.rep2.od/IRFinder-IR-dir.txt 
