@@ -36,7 +36,7 @@ resultsNames(dds)                                 # Check the actual variable na
 
 
 res.WT = results(dds, name = "ConditionWT.IRFinderIR")
-write.table(res.WT,"res.WT.txt",sep="\t",col.names = NA)
+#write.table(res.WT,"res.WT.txt",sep="\t",col.names = NA)
 # This tests if the number of IR reads are significantly different from normal spliced reads, in the WT samples.
 # We might only be interested in the "log2FoldChange" column, instead of the significance.
 # This is because "log2FoldChange" represents log2(number of intronic reads/number of normal spliced reads).
@@ -51,7 +51,7 @@ IRratio.WT = WT.IR_vs_Splice/(1+WT.IR_vs_Splice)
 
 # Similarly, we can get IR ratio in the KO samples
 res.KO = results(dds, name = "ConditionKO.IRFinderIR")
-#write.table(res.KO,"res.KO.txt",sep="\t",col.names = NA)
+write.table(res.KO,"res.KO.txt",sep="\t",col.names = NA)
 
 KO.IR_vs_Splice=2^res.KO$log2FoldChange
 IRratio.KO = KO.IR_vs_Splice/(1+KO.IR_vs_Splice)
