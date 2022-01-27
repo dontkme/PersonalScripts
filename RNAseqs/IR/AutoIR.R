@@ -1,4 +1,6 @@
 library(DESeq2)
+# library(dplyr)
+library(tidyverse)
 source("../DESeq2Constructor.R")  #Load IRFinder-related function
 
 results = read.table("filePaths.txt")
@@ -31,8 +33,9 @@ dds = metaList$DESeq2Object                       # Extract DESeq2 Object with n
 
 design(dds) = ~Condition + Condition:IRFinder     # Build a formula of GLM. Read below for more details. 
 dds = DESeq(dds)                                  # Estimate parameters and fit to model
-resultsNames(dds)                                 # Check the actual variable name assigned by DESeq2
-
+#resultsNames(dds)                                 # Check the actual variable name assigned by DESeq2
+#write.table(counts(dds,normalized=T),"AllCountsNormalized.txt",sep="\t")
+write.table(counts(dds,normalized=F),"AllCounts.txt",sep="\t")
 
 
 res.WT = results(dds, name = "ConditionWT.IRFinderIR")
@@ -67,10 +70,24 @@ write.table(res.diff,"res.diff.txt",sep="\t",col.names = NA)
 # 2) with adjusted p values less than 0.05
 
 IR.change = IRratio.KO - IRratio.WT
-png("IR.change.png", width = 2000,height = 2000)
-plot(IR.change,col=ifelse(res.diff$padj < 0.05 & abs(IR.change)>=0.1, "red", "black"))
+png("IR.change.png", width = 3000,height = 2000)
+plot(IR.change,col=ifelse(res.diff$padj < 0.05 & abs(IR.change)>=0.1, "red", "black"),cex.axis = 2)
 dev.off()
 
+IRratioall <- cbind(Intron=row.names(res.diff),IRratio.WT,IRratio.KO,IR.change,baseMean=res.diff$baseMean,log2FoldChange=res.diff$log2FoldChange,lfcSE=res.diff$lfcSE,stat=res.diff$stat,pvalue=res.diff$pvalue,padj=res.diff$padj)
+IRratioall <- as.data.frame(IRratioall)
+IRratioall$padj <- as.numeric(as.character(IRratioall$padj))
+IRratioall$log2FoldChange <- as.numeric(as.character(IRratioall$log2FoldChange))
+
+IRratioall <- IRratioall %>%mutate(PadjSig=ifelse(padj<0.05,"TRUE","FALSE"),UPSig=ifelse(padj<0.05 & log2FoldChange >0,"TRUE","FALSE"),DownSig=ifelse(padj<0.05 & log2FoldChange <0,"TRUE","FALSE"))
+write.table(IRratioall[,11:13]  %>% map(table),"IRSigTable.txt",sep="\t",col.names = NA)
+write.table(IRratioall,"IRratioAll.txt", col.names = NA,sep="\t")
+# IRPadjLT0.5 <- IRratioall %>% filter(padj<0.05)
+# IRPadjLT0.5UP <- IRPadjLT0.5 %>% filter(log2FoldChange>0)
+# IRPadjLT0.5Down <- IRPadjLT0.5 %>% filter(log2FoldChange<0)
+# write.table(IRPadjLT0.5,"IRratioAll_padjLT0.05.txt",sep="\t",col.names = NA)
+# write.table(IRPadjLT0.5UP,"IRratioAll_padjLT0.05_UP.txt",sep="\t",col.names = NA)
+# write.table(IRPadjLT0.5Down,"IRratioAll_padjLT0.05_Down.txt",sep="\t",col.names = NA)
 # PLEASE NOTE    
 # You might see dots at the same horizontal level (same IR change) either marked as significant (red) or not (black)
 # This is because the Wald test applied above is testing on fold changes instead of absolute changes
