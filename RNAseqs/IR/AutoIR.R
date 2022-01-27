@@ -1,7 +1,11 @@
+### AutoIR.R. Kaining Hu edited on 2021-01-27
+
 library(DESeq2)
 # library(dplyr)
 library(tidyverse)
-source("../DESeq2Constructor.R")  #Load IRFinder-related function
+source("../DESeq2Constructor.R")  # Load IRFinder-related function
+
+
 
 results = read.table("filePaths.txt")
 paths = as.vector(results$V1)                                            # File names must be saved in a vector
@@ -35,7 +39,7 @@ design(dds) = ~Condition + Condition:IRFinder     # Build a formula of GLM. Read
 dds = DESeq(dds)                                  # Estimate parameters and fit to model
 #resultsNames(dds)                                 # Check the actual variable name assigned by DESeq2
 #write.table(counts(dds,normalized=T),"AllCountsNormalized.txt",sep="\t")
-write.table(counts(dds,normalized=F),"AllCounts.txt",sep="\t")
+write.table(counts(dds,normalized=F),"AllCounts.txt",sep="\t",col.names = NA)
 
 
 res.WT = results(dds, name = "ConditionWT.IRFinderIR")
