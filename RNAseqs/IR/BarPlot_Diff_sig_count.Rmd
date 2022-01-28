@@ -1,0 +1,43 @@
+---
+title: "IR diff significant result counts. R Notebook"
+output: html_notebook
+---
+## Load Libraries
+```{r}
+library(ggpubr)
+```
+
+
+
+```{r}
+DiffSigCount <- read.table("IR_diff_sig_Count.txt",header = T, sep="\t")
+rownames(DiffSigCount) <- paste(DiffSigCount$Sample_ID, DiffSigCount$Genes,sep = "_")
+```
+
+## Plot Barplot
+
+```{r}
+# ggbarplot(DiffSigCount, x="Genes", y1="IRUP", y2="IRDown",
+#   palette = "Uchicago",
+#   label = TRUE, lab.col = "black",orientation = "horiz",)
+# barplot(as.matrix(t(DiffSigCount[,6:7])),horiz = T, names.arg = DiffSigCount$Genes,las=1)
+setEPS()
+postscript("Allcounts.eps")
+par(mar=c(5, 7, 4, 2) + 0.1)
+barplot(as.matrix(t(DiffSigCount[,6:7])),horiz = T, #names.arg = DiffSigCount$Genes,
+        las=1,legend=colnames(DiffSigCount[,6:7]),col=c("lightblue","navy"),cex.names =0.5, border="white",args.legend = list(x = "right", cex=0.75),xlim=c(0,500))
+dev.off()
+# barplot(cbind(IRUP,IRDown)~Genes,data=DiffSigCount)
+```
+```{r}
+# p <- ggplot(data=DiffSigCount,aes(Genes,IRUP,fill=IRDown))
+# p
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
