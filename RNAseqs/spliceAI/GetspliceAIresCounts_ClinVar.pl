@@ -12,7 +12,8 @@ our $vcfgz="";
 our $suffix="res";
 our $spliceai_res="NO";
 our $cutoff=0.5;
-GetOptions("o=s" => \$opfn, "g=s" => \$vcfgz,"s=s" => \$suffix,"r=s" => \$spliceai_res,"c=f" => \$cutoff)
+our $distance=5;
+GetOptions("o=s" => \$opfn, "g=s" => \$vcfgz,"s=s" => \$suffix,"r=s" => \$spliceai_res,"c=f" => \$cutoff,"d=i" => \$distance)
 or die("[-]Error in command line arguments
   Usage: perl GetspliceAIresCounts.pl [options] -g <in.vcf.gz> <input region file>
     options:
@@ -20,7 +21,8 @@ or die("[-]Error in command line arguments
    [-s string|output suffix Default: res]
    [-r string|whether input vcf.gz contain spliceAI annotations. (Y)es or (N)o. Default: NO]
    [-c float|Cutoff of delta Score. Default: 0.5]
-    Note:  Get spliceai results count (ClinVar version) v0.120 2022/02/09.\n");
+   [-d int|Filter snp distence to boundaries. Dfault: 5]
+    Note:  Get spliceai results count (ClinVar version) v0.130 2022/02/09.\n");
 
 
 if ($opfn eq ""){
@@ -49,6 +51,13 @@ if ($cutoff > 1 && $cutoff < 0){
 }else{
   print "Cutoff: $cutoff\n";
 }
+
+if ($distance < 0 ){
+    die ("[-]Error. Filter snp distence to boundaries must >= 0 \n");
+}else{
+  print "Distance to boundaries: $distance\n";
+}
+
 ### Main
 our $starttime=time();
 open OUTSUM, "> $opfn.txt" or die ("[-] Error: Can't open or create $opfn.txt\n");
@@ -93,6 +102,7 @@ while(defined(our $seq = <>)){
     #### Count line numbers.
     my $rescount=0;
     my $passcount=0;
+    my $flagcount=0;
     my $maxDS=0;
     my @DS=();
     open(FILE, "< $AS/$AS.$suffix.txt") or die "can't open $AS/$AS.$suffix.txt: $!";
@@ -153,7 +163,14 @@ while(defined(our $seq = <>)){
                 $resline =~ s/\s$//;
                 my $Dpos1=$snppos-$pos1;
                 my $Dpos2=$snppos-$pos2;
-                print OUTPASS "$resline\t$AG\t$AL\t$DG\t$DL\t$AGP\t$ALP\t$DGP\t$DLP\t$maxDS\t$gene\t$chr\t$pos1\t$pos2\t$PM\t$Dpos1\t$Dpos2\n";
+                my $flag1="FALSE";
+                if(abs($Dpos1) gt $distance && abs($Dpos2) gt $distance){
+
+                  $flag1 = "TRUE";
+                  $flagcount++;
+
+                }
+                print OUTPASS "$resline\t$AG\t$AL\t$DG\t$DL\t$AGP\t$ALP\t$DGP\t$DLP\t$maxDS\t$gene\t$chr\t$pos1\t$pos2\t$PM\t$Dpos1\t$Dpos2\t$flag1\n";
               }
 
             }
@@ -166,7 +183,7 @@ while(defined(our $seq = <>)){
     $rescount=$rescount-1;
     # say $rescount;
 	# system 'cd ..';
-    print OUTSUM "$AS\t$ASregion\t$gene\t$chr\t$pos1\t$pos2\t$rescount\t$passcount\n";
+    print OUTSUM "$AS\t$ASregion\t$gene\t$chr\t$pos1\t$pos2\t$rescount\t$passcount\t$flagcount\n";
   }
 
 }
