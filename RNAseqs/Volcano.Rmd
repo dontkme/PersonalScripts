@@ -1,0 +1,117 @@
+---
+title: "Volcano R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+```{r}
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+```
+
+
+```{r}
+Vp <- read.table("Macrophageko_PBS_vs_ff_PBS vocanol plot(1).txt",header = T,sep="\t")
+Vp$DE <- "NS"
+```
+
+```{r}
+Vp$DE[Vp$logFC>1.5 & Vp$PValue<0.05] <- "UP"
+Vp$DE[Vp$logFC< -1.5 & Vp$PValue<0.05] <- "DOWN"
+Vp$delabel <- NA
+selected=c("Rhoh", "Nme1")
+Vp$delabel[Vp$genes =="Rhoh"] <- "Rhoh"
+Vp$delabel[Vp$genes =="Nme1"] <- "Nme1"
+Vp$DE[Vp$genes %in% selected] <- "selected"
+```
+```{r}
+ggplot(data=Vp, aes(x=logFC,y=-log10(PValue),col=DE, label=delabel))+
+  geom_point(size=1)+
+  theme_minimal()+
+  geom_text_repel()+
+  scale_color_manual(values = c("red3","black","blue","red3"))+
+  # geom_vline(xintercept = c(-1.5,1.5),col="red")+
+  # geom_hline(yintercept = -log10(0.05),col="red")+
+  # ylim(c(0,55))+
+  theme(text=element_text(size = 11))
+```
+```{r}
+ggsave("Volcano_red0.png", width = 5, height = 3, device = "png",dpi=450,bg = "transparent")
+ggsave("Volcano_red0.eps", width = 5, height = 3, device = "eps",dpi=450,bg = "transparent")
+ggsave("Volcano_red0.pdf", width = 5, height = 3, device = "pdf",dpi=450,bg = "transparent")
+```
+
+```{r}
+ Vp <- Vp %>% arrange(PValue)
+ #%>% head(10)
+#arrange(Vp, Pvalue)
+thresh= head(arrange(Vp, PValue),10)$Pvalue[10]
+```
+
+```{r}
+library(EnhancedVolcano)
+```
+```{r}
+EnhancedVolcano(Vp,x="logFC",y="PValue",lab=Vp$genes)
+```
+
+```{r}
+EnhancedVolcano(Vp,x="logFC",y="PValue",lab=Vp$genes,
+                pCutoff = 0.05, FCcutoff = 1.5)
+```
+```{r}
+selectred=c("Rhoh", "Nme1")
+EnhancedVolcano(Vp,x="logFC",y="PValue",lab=Vp$genes,
+                pCutoff = 0.05, FCcutoff = 1.5, selectLab = selectred,
+                drawConnectors = TRUE,widthConnectors = 0.5,
+                title = "",subtitle = "",legendPosition = "right",
+                # legendLabSize = 7,axisLabSize = 7,labSize = 5.0
+                )
+# ggsave("Volcano.png",device = "png",units = "mm",width = 120,height = 85,dpi=450,bg = "transparent")
+ggsave("Volcano.png",device = "png",dpi=450,bg = "transparent")
+ggsave("Volcano.eps",device = cairo_ps,dpi=450)
+
+
+```
+```{r}
+selectred=c("Rhoh", "Nme1")
+EnhancedVolcano(Vp,x="logFC",y="PValue",lab=Vp$genes,
+                pCutoff = 0.05, FCcutoff = 1.5, selectLab = selectred,
+                drawConnectors = TRUE,widthConnectors = 0.5,colConnectors = 'blue',
+                title = "",subtitle = "",#legendPosition = "right",
+                # legendLabSize = 7,axisLabSize = 7,labSize = 5.0
+                col=c('black', 'black', 'black', 'red3'),
+                colAlpha = 1,
+                pointSize = 0.5,
+                labCol = "black",
+                labSize = 3,
+                boxedLabels = TRUE,
+                # shade = selectred,
+                # shadeAlpha = 1,
+                # shadeFill = 'skyblue',
+                # shadeSize = 1,
+                # shadeBins = 5,
+                legendLabSize = 10,
+                legendIconSize = 2.0,
+                legendPosition = 'none'
+)#+xlim(c(-4,4))
+
+# ggsave("Volcano.png",device = "png",units = "mm",width = 120,height = 85,dpi=450,bg = "transparent")
+ggsave("Volcano_red.png", width = 5, height = 5, device = "png",dpi=450,bg = "transparent")
+ggsave("Volcano_red.eps", width = 5, height = 5, device = "eps",dpi=450,bg = "transparent")
+ggsave("Volcano_red.pdf", width = 5, height = 5, device = "pdf",dpi=450,bg = "transparent")
+# ggsave("Volcano.eps",device = cairo_ps,dpi=450)
+
+
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
