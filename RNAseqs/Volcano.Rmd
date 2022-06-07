@@ -23,8 +23,9 @@ Vp$DE[Vp$logFC>1.5 & Vp$PValue<0.05] <- "UP"
 Vp$DE[Vp$logFC< -1.5 & Vp$PValue<0.05] <- "DOWN"
 Vp$delabel <- NA
 selected=c("Rhoh", "Nme1")
-Vp$delabel[Vp$genes =="Rhoh"] <- "Rhoh"
-Vp$delabel[Vp$genes =="Nme1"] <- "Nme1"
+# Vp$delabel[Vp$genes =="Rhoh"] <- "Rhoh"
+# Vp$delabel[Vp$genes =="Nme1"] <- "Nme1"
+Vp$delabel[Vp$genes %in% selected] <- Vp$genes[Vp$genes %in% selected]
 Vp$DE[Vp$genes %in% selected] <- "selected"
 ```
 ```{r}
