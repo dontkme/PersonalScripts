@@ -275,7 +275,7 @@ print "All done. Dealed with $annotcount annotations.\n";
 close OUT;
 close OUTDOWN;
 close OUTUP;
-clsoe OUTALL;
+close OUTALL;
 
 ######################################
 #End  main
