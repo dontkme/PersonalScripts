@@ -2,7 +2,7 @@
 
 #AUTHORS
 # Kaining Hu (c) 2023
-# Get ASO Sequences from target fasta v1.0000 2023/11/03
+# Convert ASO Sequences v1.0000 2023/11/10
 # hukaining@gmail.com
 
 use strict;
@@ -33,7 +33,7 @@ or die('[-]Error in command line arguments
     [-o string|outprefix Default: getASOtransOut]
     [-n string|ASO prefix: Default: "", use fasta header when NULL]
 	 
-    Note: Get ASO Sequences from target fasta v1.0000 2023/11/03\n');
+    Note: Convert ASO Sequences v1.0000 2023/11/10\n');
 
 ###################sub TRseq##########
  
@@ -56,17 +56,6 @@ sub TRseq($)
 
 open OUT, "> $opfn.transASO.fa" or die ("[-] Error: Can't open or create $opfn.transASO.fa\n");
 open OUTRAW, "> $opfn.ASOraw.fa" or die ("[-] Error: Can't open or create $opfn.ASOraw.fa\n");
-# if ($upstreml >= 0){
-#     open OUTUP, "> $opfn.up$upstreml.fa" or die ("[-] Error: Can't open or create $opfn.up$upstreml.fa\n");
-# } else {
-#     die ("[-] Error: Upstream lenghth must be zero or greater\n");
-# }
-
-# if ($downstreml >= 0){
-#     open OUTDOWN, "> $opfn.down$downstreml.fa" or die ("[-] Error: Can't open or create $opfn.down$downstreml.fa\n");
-# } else {
-#     die ("[-] Error: Downstream lenghth must be zero or greater\n");
-# }
 
 open OUTALL, "> $opfn.transASO.txt" or die ("[-] Error: Can't open or create $opfn.transASO.txt\n");
 
@@ -150,6 +139,7 @@ while(defined(our $inrow = <>)){
 print "All done. Dealed with $annotcount target sequence(s).\n";
 close OUT;
 close OUTALL;
+close OUTRAW;
 
 
 ######################################
