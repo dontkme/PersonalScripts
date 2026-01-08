@@ -28,7 +28,7 @@ my $verbose;
 #or die("Error in command line arguments\n perl Searchhelitron -o <outputfile> (inputfile)\n");
 GetOptions("o=s" => \$opfn,"n=s" => \$ASOprefix,"verbose"=>\$verbose)
 or die('[-]Error in command line arguments
-  Usage: perl GetASOtrans.pl [options] <input FASTA file>
+  Usage: perl GetASOtrans.pl [options] <input ASO list file>
     options:
     [-o string|outprefix Default: getASOtransOut]
     [-n string|ASO prefix: Default: "", use fasta header when NULL]
