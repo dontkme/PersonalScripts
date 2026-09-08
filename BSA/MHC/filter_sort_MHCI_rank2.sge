@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+#$ -S /bin/bash
+#$ -N filter_MHCI_rank2
+#$ -pe smp 16
+#$ -cwd
+#$ -j y
+
+set -eo pipefail
+
+work_dir="${SGE_O_WORKDIR:-${PBS_O_WORKDIR:-$PWD}}"
+job_id="${JOB_ID:-${PBS_JOBID:-local_$$}}"
+scheduler_tmp="${TMPDIR:-}"
+
+source /sibcb1/jizhelab1/hukaining/.bashrc
+mamba activate py39
+
+set -u
+cd "$work_dir"
+
+input="${INPUT_FILE:-KARS_V2_V3_V4_netmhcpan_el_all_HLA_len8-14.tsv}"
+rank_max="${RANK_MAX:-2}"
+sort_memory="${SORT_MEMORY:-4G}"
+
+if [[ ! -f "$input" ]]; then
+    echo "ERROR: input file not found: $input" >&2
+    exit 1
+fi
+
+case "$input" in
+    *.tsv.gz) output_stem="${input%.tsv.gz}" ;;
+    *.tsv)    output_stem="${input%.tsv}" ;;
+    *.gz)     output_stem="${input%.gz}" ;;
+    *)        output_stem="$input" ;;
+esac
+
+output="${OUTPUT_FILE:-${output_stem}_rank_le2_rankAsc_scoreDesc.tsv.gz}"
+
+if [[ "$output" == "$input" ]]; then
+    echo "ERROR: output must not overwrite the input file." >&2
+    exit 1
+fi
+
+if [[ -e "$output" ]]; then
+    echo "ERROR: output already exists: $output" >&2
+    echo "Rename or move it before resubmitting." >&2
+    exit 1
+fi
+
+allocated_slots="${NSLOTS:-${PBS_NP:-${NCPUS:-1}}}"
+if [[ ! "$allocated_slots" =~ ^[1-9][0-9]*$ ]]; then
+    allocated_slots=1
+fi
+
+sort_tmp_parent="${SORT_TMPDIR:-$scheduler_tmp}"
+if [[ -z "$sort_tmp_parent" || ! -d "$sort_tmp_parent" || ! -w "$sort_tmp_parent" ]]; then
+    sort_tmp_parent="$work_dir"
+fi
+
+safe_job_id="${job_id//[^A-Za-z0-9_.-]/_}"
+sort_tmp=$(mktemp -d "${sort_tmp_parent%/}/MHCI_sort.${safe_job_id}.XXXXXX")
+partial_output="${output}.partial.${safe_job_id}"
+
+cleanup() {
+    if [[ -d "$sort_tmp" ]]; then
+        rm -rf -- "$sort_tmp"
+    fi
+    if [[ -f "$partial_output" ]]; then
+        rm -f -- "$partial_output"
+    fi
+}
+trap cleanup EXIT
+
+read_input() {
+    if [[ "$input" == *.gz ]]; then
+        gzip -dc "$input"
+    else
+        cat "$input"
+    fi
+}
+
+header=$(read_input | head -n 1 || true)
+header="${header%$'\r'}"
+
+if [[ -z "$header" ]]; then
+    echo "ERROR: input has no header: $input" >&2
+    exit 1
+fi
+
+# IEDB wrapper versions may call the two columns rank/percentile_rank and
+# score/prediction_score. Resolve them by name rather than hard-coding indexes.
+IFS=$'\t' read -r -a column_names <<< "$header"
+score_column=0
+rank_column=0
+score_name=""
+rank_name=""
+
+for index in "${!column_names[@]}"; do
+    column_name="${column_names[$index]%$'\r'}"
+    normalized_name=$(printf '%s' "$column_name" | tr '[:upper:]' '[:lower:]')
+
+    case "$normalized_name" in
+        score|prediction_score|el_score)
+            if (( score_column == 0 )); then
+                score_column=$((index + 1))
+                score_name="$column_name"
+            fi
+            ;;
+        rank|percentile_rank|rank_el|%rank_el)
+            if (( rank_column == 0 )); then
+                rank_column=$((index + 1))
+                rank_name="$column_name"
+            fi
+            ;;
+    esac
+done
+
+if (( score_column == 0 || rank_column == 0 )); then
+    echo "ERROR: could not identify the MHC-I Score and Rank columns." >&2
+    echo "Header: $header" >&2
+    exit 1
+fi
+
+sort_threads=$((allocated_slots - 2))
+if (( sort_threads < 1 )); then
+    sort_threads=1
+fi
+
+declare -a sort_options=(
+    -t $'\t'
+    -s
+    -k"${rank_column},${rank_column}g"
+    -k"${score_column},${score_column}gr"
+    -T "$sort_tmp"
+)
+
+sort_help=$(sort --help 2>&1 || true)
+if [[ "$sort_help" == *"--parallel"* ]]; then
+    sort_options+=(--parallel="$sort_threads" -S "$sort_memory")
+fi
+
+echo "[$(date '+%F %T')] Input: $input" >&2
+echo "[$(date '+%F %T')] Output: $output" >&2
+echo "[$(date '+%F %T')] Filter: $rank_name <= $rank_max" >&2
+echo "[$(date '+%F %T')] Sort: $rank_name ascending, $score_name descending" >&2
+echo "[$(date '+%F %T')] Columns: $score_name=$score_column, $rank_name=$rank_column" >&2
+echo "[$(date '+%F %T')] Allocated slots: $allocated_slots; sort threads: $sort_threads" >&2
+echo "[$(date '+%F %T')] Sort temporary directory: $sort_tmp" >&2
+
+{
+    printf '%s\n' "$header"
+
+    read_input | awk -F '\t' -v OFS='\t' -v rank_column="$rank_column" -v rank_max="$rank_max" '
+        NR == 1 { next }
+        {
+            rank_value = $rank_column
+            sub(/\r$/, "", rank_value)
+
+            if (rank_value ~ /^[[:space:]]*[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?[[:space:]]*$/) {
+                if ((rank_value + 0) <= (rank_max + 0)) {
+                    print
+                    kept++
+                }
+            } else {
+                invalid++
+            }
+        }
+        END {
+            printf "Rows retained: %d; rows with invalid rank: %d\n", kept + 0, invalid + 0 > "/dev/stderr"
+        }
+    ' | LC_ALL=C sort "${sort_options[@]}"
+} | gzip -1 > "$partial_output"
+
+gzip -t "$partial_output"
+mv "$partial_output" "$output"
+
+if [[ "$output" == /* ]]; then
+    result_path="$output"
+else
+    result_path="$work_dir/$output"
+fi
+
+echo "[$(date '+%F %T')] Completed successfully" >&2
+echo "[$(date '+%F %T')] Result: $result_path" >&2

@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+#$ -S /bin/bash
+#$ -N filter_MHCII_rank2
+#$ -pe smp 16
+#$ -cwd
+#$ -j y
+
+set -eo pipefail
+
+# Save scheduler values before loading the interactive shell configuration.
+work_dir="${SGE_O_WORKDIR:-${PBS_O_WORKDIR:-$PWD}}"
+job_id="${JOB_ID:-${PBS_JOBID:-local_$$}}"
+scheduler_tmp="${TMPDIR:-}"
+
+source /sibcb1/jizhelab1/hukaining/.bashrc
+mamba activate py39
+
+set -u
+cd "$work_dir"
+
+# INPUT_FILE, OUTPUT_FILE, RANK_MAX, SORT_MEMORY, and SORT_TMPDIR can be
+# overridden with qsub -v. Defaults match the current MHC-II result.
+input="${INPUT_FILE:-KARS_V2_V3_netmhciipan_el_all_HLA_len11-30.tsv.gz}"
+rank_max="${RANK_MAX:-2}"
+sort_memory="${SORT_MEMORY:-4G}"
+
+# Also accept the decompressed .tsv if the default .tsv.gz is absent.
+if [[ ! -f "$input" && "$input" == *.gz && -f "${input%.gz}" ]]; then
+    input="${input%.gz}"
+fi
+
+if [[ ! -f "$input" ]]; then
+    echo "ERROR: input file not found: $input" >&2
+    exit 1
+fi
+
+case "$input" in
+    *.tsv.gz) output_stem="${input%.tsv.gz}" ;;
+    *.tsv)    output_stem="${input%.tsv}" ;;
+    *.gz)     output_stem="${input%.gz}" ;;
+    *)        output_stem="$input" ;;
+esac
+
+output="${OUTPUT_FILE:-${output_stem}_rank_le2_rankAsc_scoreDesc.tsv.gz}"
+
+if [[ "$output" == "$input" ]]; then
+    echo "ERROR: output must not overwrite the input file." >&2
+    exit 1
+fi
+
+if [[ -e "$output" ]]; then
+    echo "ERROR: output already exists: $output" >&2
+    echo "Rename or move it before resubmitting." >&2
+    exit 1
+fi
+
+allocated_slots="${NSLOTS:-${PBS_NP:-${NCPUS:-1}}}"
+if [[ ! "$allocated_slots" =~ ^[1-9][0-9]*$ ]]; then
+    allocated_slots=1
+fi
+
+# Use scheduler-provided node-local scratch when available. SORT_TMPDIR can be
+# set explicitly if a different filesystem has more free space.
+sort_tmp_parent="${SORT_TMPDIR:-$scheduler_tmp}"
+if [[ -z "$sort_tmp_parent" || ! -d "$sort_tmp_parent" || ! -w "$sort_tmp_parent" ]]; then
+    sort_tmp_parent="$work_dir"
+fi
+
+safe_job_id="${job_id//[^A-Za-z0-9_.-]/_}"
+sort_tmp=$(mktemp -d "${sort_tmp_parent%/}/MHCII_sort.${safe_job_id}.XXXXXX")
+partial_output="${output}.partial.${safe_job_id}"
+
+cleanup() {
+    if [[ -d "$sort_tmp" ]]; then
+        rm -rf -- "$sort_tmp"
+    fi
+    if [[ -f "$partial_output" ]]; then
+        rm -f -- "$partial_output"
+    fi
+}
+trap cleanup EXIT
+
+read_input() {
+    if [[ "$input" == *.gz ]]; then
+        gzip -dc "$input"
+    else
+        cat "$input"
+    fi
+}
+
+# Reading only the first line may give gzip SIGPIPE after head exits; the
+# captured header is still valid, so suppress that expected pipeline status.
+header=$(read_input | head -n 1 || true)
+header="${header%$'\r'}"
+
+if [[ -z "$header" ]]; then
+    echo "ERROR: input has no header: $input" >&2
+    exit 1
+fi
+
+# Resolve column positions from their names rather than silently assuming that
+# every future result keeps score in column 8 and percentile_rank in column 9.
+IFS=$'\t' read -r -a column_names <<< "$header"
+score_column=0
+rank_column=0
+
+for index in "${!column_names[@]}"; do
+    column_name="${column_names[$index]%$'\r'}"
+    case "$column_name" in
+        score) score_column=$((index + 1)) ;;
+        percentile_rank) rank_column=$((index + 1)) ;;
+    esac
+done
+
+if (( score_column == 0 || rank_column == 0 )); then
+    echo "ERROR: could not find score and percentile_rank columns." >&2
+    echo "Header: $header" >&2
+    exit 1
+fi
+
+# Reserve capacity for decompression and awk while allowing GNU sort to use
+# the remaining slots. On systems without GNU --parallel, sort runs normally.
+sort_threads=$((allocated_slots - 2))
+if (( sort_threads < 1 )); then
+    sort_threads=1
+fi
+
+declare -a sort_options=(
+    -t $'\t'
+    -s
+    -k"${rank_column},${rank_column}g"
+    -k"${score_column},${score_column}gr"
+    -T "$sort_tmp"
+)
+
+sort_help=$(sort --help 2>&1 || true)
+if [[ "$sort_help" == *"--parallel"* ]]; then
+    sort_options+=(--parallel="$sort_threads" -S "$sort_memory")
+fi
+
+echo "[$(date '+%F %T')] Input: $input" >&2
+echo "[$(date '+%F %T')] Output: $output" >&2
+echo "[$(date '+%F %T')] Filter: percentile_rank <= $rank_max" >&2
+echo "[$(date '+%F %T')] Sort: percentile_rank ascending, score descending" >&2
+echo "[$(date '+%F %T')] Columns: score=$score_column, percentile_rank=$rank_column" >&2
+echo "[$(date '+%F %T')] Allocated slots: $allocated_slots; sort threads: $sort_threads" >&2
+echo "[$(date '+%F %T')] Sort temporary directory: $sort_tmp" >&2
+
+{
+    printf '%s\n' "$header"
+
+    read_input | awk -F '\t' -v OFS='\t' -v rank_column="$rank_column" -v rank_max="$rank_max" '
+        NR == 1 { next }
+        {
+            rank_value = $rank_column
+            sub(/\r$/, "", rank_value)
+
+            if (rank_value ~ /^[[:space:]]*[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?[[:space:]]*$/) {
+                if ((rank_value + 0) <= (rank_max + 0)) {
+                    print
+                    kept++
+                }
+            } else {
+                invalid++
+            }
+        }
+        END {
+            printf "Rows retained: %d; rows with invalid rank: %d\n", kept + 0, invalid + 0 > "/dev/stderr"
+        }
+    ' | LC_ALL=C sort "${sort_options[@]}"
+} | gzip -1 > "$partial_output"
+
+gzip -t "$partial_output"
+mv "$partial_output" "$output"
+
+echo "[$(date '+%F %T')] Completed successfully" >&2
+echo "[$(date '+%F %T')] Result: $work_dir/$output" >&2
+

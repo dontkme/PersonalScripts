@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#$ -S /bin/bash
+#$ -N annotate_KARS_MHCI
+#$ -cwd
+#$ -j y
+
+set -eo pipefail
+
+work_dir="${SGE_O_WORKDIR:-${PBS_O_WORKDIR:-$PWD}}"
+
+source /sibcb1/jizhelab1/hukaining/.bashrc
+mamba activate py39
+
+set -u
+cd "$work_dir"
+
+annotator="annotate_KARS_MHC_G12_Q61.py"
+input="${INPUT_FILE:-KARS_V2_V3_V4_netmhcpan_el_all_HLA_len8-14_rank_le2_rankAsc_scoreDesc.tsv.gz}"
+
+if [[ ! -f "$input" && "$input" == *.gz && -f "${input%.gz}" ]]; then
+    input="${input%.gz}"
+fi
+
+for required_file in \
+    "$annotator" \
+    "$input" \
+    "KARS vaccine_V2.sw" \
+    "KARS vaccine_V3.sw" \
+    "KARS vaccine_V4.sw" \
+    "KARS vaccine_V2.fa" \
+    "KARS vaccine_V3.fa" \
+    "KARS vaccine_V4.fa"
+do
+    if [[ ! -f "$required_file" ]]; then
+        echo "ERROR: required file not found: $required_file" >&2
+        exit 1
+    fi
+done
+
+declare -a arguments=("$input")
+
+if [[ -n "${OUTPUT_FILE:-}" ]]; then
+    arguments+=(--output "$OUTPUT_FILE")
+fi
+
+if [[ -n "${SUMMARY_FILE:-}" ]]; then
+    arguments+=(--summary "$SUMMARY_FILE")
+fi
+
+if [[ -n "${MANIFEST_FILE:-}" ]]; then
+    arguments+=(--manifest "$MANIFEST_FILE")
+fi
+
+if [[ "${FORCE:-0}" == "1" ]]; then
+    arguments+=(--force)
+fi
+
+echo "[$(date '+%F %T')] Starting MHC-I G12/Q61 annotation" >&2
+echo "[$(date '+%F %T')] Input: $input" >&2
+
+python "$annotator" "${arguments[@]}"
+
+echo "[$(date '+%F %T')] MHC-I annotation completed successfully" >&2
+

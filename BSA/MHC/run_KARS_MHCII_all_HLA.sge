@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+#$ -S /bin/bash
+#$ -N KARS_MHCII_all_HLA
+#$ -pe smp 16
+#$ -cwd
+#$ -j y
+
+set -eo pipefail
+
+# Capture scheduler state before loading the interactive shell configuration.
+scheduler_work_dir="${SGE_O_WORKDIR:-${PBS_O_WORKDIR:-}}"
+scheduler_job_id="${JOB_ID:-${PBS_JOBID:-local_$$}}"
+
+source /sibcb1/jizhelab1/hukaining/.bashrc
+mamba activate py39
+
+set -u
+
+if [[ -z "$scheduler_work_dir" ]]; then
+    echo "ERROR: neither SGE_O_WORKDIR nor PBS_O_WORKDIR is set." >&2
+    echo "Submit this script with qsub from the input-file directory." >&2
+    exit 1
+fi
+
+cd "$scheduler_work_dir"
+
+predictor="/sibcb1/jizhelab1/hukaining/Biosoft/mhc_ii/mhc_II_binding.py"
+allele_source="MHCII_netMHCiipan4_1_alleles_name.list.txt"
+fasta_v2="KARS vaccine_V2.fa"
+fasta_v3="KARS vaccine_V3.fa"
+fasta_v4="KARS vaccine_V4.fa"
+
+method="netmhciipan_el"
+lengths="11-30"
+batch_size=20
+expected_human_alleles=5620
+
+output="KARS_V2_V3_V4_netmhciipan_el_all_HLA_len11-30.tsv.gz"
+work_root="$scheduler_work_dir/KARS_MHCII_V2_V3_V4_all_HLA_work"
+results_dir="$work_root/completed_batches"
+allele_manifest="$work_root/all_human_HLA_II_alleles.txt"
+
+for required_file in "$predictor" "$allele_source" "$fasta_v2" "$fasta_v3" "$fasta_v4"; do
+    if [[ ! -f "$required_file" ]]; then
+        echo "ERROR: required file not found: $required_file" >&2
+        exit 1
+    fi
+done
+
+if [[ -e "$output" ]]; then
+    echo "Output already exists; nothing to do: $output" >&2
+    exit 0
+fi
+
+mkdir -p "$work_root" "$results_dir"
+
+job_tag="${scheduler_job_id//[^A-Za-z0-9_.-]/_}"
+job_tmp=$(mktemp -d "$work_root/job.${job_tag}.XXXXXX")
+
+cleanup() {
+    if [[ -d "$job_tmp" ]]; then
+        rm -rf -- "$job_tmp"
+    fi
+}
+trap cleanup EXIT
+
+combined_fasta="$job_tmp/KARS_V2_V3_V4.no_stop.fa"
+
+# Combine all three proteins, assign stable record identifiers, and remove
+# terminal stop symbols, which are not valid input for the IEDB wrapper. The
+# V4 source currently has a V5 header, so only the temporary header is fixed.
+normalize_fasta() {
+    local input_fasta="$1"
+    local sequence_id="$2"
+
+    awk -v sequence_id="$sequence_id" '
+        NR == 1 { print ">" sequence_id; next }
+        { sub(/\*$/, ""); print }
+    ' "$input_fasta"
+}
+
+{
+    normalize_fasta "$fasta_v2" "KARS_vaccine_V2"
+    normalize_fasta "$fasta_v3" "KARS_vaccine_V3"
+    normalize_fasta "$fasta_v4" "KARS_vaccine_V4"
+} > "$combined_fasta"
+
+sequence_count=$(grep -c '^>' "$combined_fasta")
+if [[ "$sequence_count" -ne 3 ]]; then
+    echo "ERROR: expected 3 FASTA records, found $sequence_count." >&2
+    exit 1
+fi
+
+# Expand the official NetMHCIIpan 4.1 chain list into complete human MHC-II
+# molecules:
+#   * each DR beta chain is a complete DR molecule;
+#   * every listed DP alpha chain is paired with every listed DP beta chain;
+#   * every listed DQ alpha chain is paired with every listed DQ beta chain.
+# Mouse H-2 entries in the source file are intentionally excluded.
+new_manifest="$job_tmp/all_human_HLA_II_alleles.txt"
+
+awk -F '\t' '
+function trim(value) {
+    gsub(/\r/, "", value)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+    return value
+}
+
+NR > 1 {
+    dr = trim($1)
+    dpa = trim($2)
+    dpb = trim($3)
+    dqa = trim($4)
+    remainder = trim($5)
+
+    # The downloaded file separates the DQ-beta and Mouse headings with
+    # spaces rather than a tab. The first token is therefore the DQ-beta
+    # chain; any later H-2 token is deliberately ignored.
+    split(remainder, token, /[[:space:]]+/)
+    dqb = token[1]
+
+    if (dr != "") {
+        print "HLA-" dr
+    }
+    if (dpa != "") {
+        DPA[++number_dpa] = dpa
+    }
+    if (dpb != "") {
+        DPB[++number_dpb] = dpb
+    }
+    if (dqa != "") {
+        DQA[++number_dqa] = dqa
+    }
+    if (dqb != "" && dqb !~ /^H-2-/) {
+        DQB[++number_dqb] = dqb
+    }
+}
+
+END {
+    for (i = 1; i <= number_dpa; i++) {
+        for (j = 1; j <= number_dpb; j++) {
+            print "HLA-" DPA[i] "/" DPB[j]
+        }
+    }
+
+    for (i = 1; i <= number_dqa; i++) {
+        for (j = 1; j <= number_dqb; j++) {
+            print "HLA-" DQA[i] "/" DQB[j]
+        }
+    }
+}
+' "$allele_source" > "$new_manifest"
+
+allele_count=$(wc -l < "$new_manifest")
+duplicate_count=$(sort "$new_manifest" | uniq -d | wc -l)
+
+if [[ "$allele_count" -ne "$expected_human_alleles" ]]; then
+    echo "ERROR: expected $expected_human_alleles HLA-II molecules, generated $allele_count." >&2
+    echo "The official allele file may have changed format." >&2
+    exit 1
+fi
+
+if [[ "$duplicate_count" -ne 0 ]]; then
+    echo "ERROR: generated allele manifest contains $duplicate_count duplicate entries." >&2
+    exit 1
+fi
+
+# Protect completed batch results from being associated with a changed allele
+# manifest on a later resubmission.
+if [[ -f "$allele_manifest" ]]; then
+    if ! cmp -s "$new_manifest" "$allele_manifest"; then
+        echo "ERROR: the newly generated allele manifest differs from:" >&2
+        echo "       $allele_manifest" >&2
+        echo "Move the existing work directory before changing the allele scope." >&2
+        exit 1
+    fi
+else
+    cp "$new_manifest" "$allele_manifest"
+fi
+
+echo "[$(date '+%F %T')] Scheduler job ID: $scheduler_job_id" >&2
+echo "[$(date '+%F %T')] Host: $(hostname)" >&2
+echo "[$(date '+%F %T')] Python: $(command -v python)" >&2
+echo "[$(date '+%F %T')] Method: $method" >&2
+echo "[$(date '+%F %T')] Lengths: $lengths" >&2
+echo "[$(date '+%F %T')] Human HLA-II molecules: $allele_count" >&2
+
+# Preflight all three human class-II naming forms before starting the very
+# large production run.
+preflight_dir="$job_tmp/preflight"
+mkdir -p "$preflight_dir/tmp"
+
+(
+    cd "$preflight_dir"
+    export TMPDIR="$preflight_dir/tmp"
+    python "$predictor" \
+        "$method" \
+        "HLA-DRB1*01:01,HLA-DPA1*01:03/DPB1*01:01,HLA-DQA1*01:01/DQB1*02:01" \
+        "$combined_fasta" \
+        15 \
+        > "$preflight_dir/result.tsv"
+)
+
+if [[ ! -s "$preflight_dir/result.tsv" ]]; then
+    echo "ERROR: DR/DP/DQ preflight prediction produced no output." >&2
+    exit 1
+fi
+
+echo "[$(date '+%F %T')] DR/DP/DQ preflight completed successfully" >&2
+
+batch_dir="$job_tmp/allele_batches"
+mkdir -p "$batch_dir"
+split -l "$batch_size" -d -a 4 "$allele_manifest" "$batch_dir/alleles."
+
+batch_count=$(find "$batch_dir" -type f -name 'alleles.*' | wc -l)
+echo "[$(date '+%F %T')] Allele batches: $batch_count (up to $batch_size alleles each)" >&2
+
+# Use the number of slots actually allocated by SGE/PBS. Without a parallel
+# environment request, SGE normally reports NSLOTS=1 and the batches run
+# sequentially. Cap concurrency at the 16 slots requested above.
+allocated_slots="${NSLOTS:-${PBS_NP:-${NCPUS:-1}}}"
+if [[ ! "$allocated_slots" =~ ^[1-9][0-9]*$ ]]; then
+    allocated_slots=1
+fi
+
+parallel_jobs="$allocated_slots"
+if (( parallel_jobs > 16 )); then
+    parallel_jobs=16
+fi
+
+export OMP_NUM_THREADS=1
+echo "[$(date '+%F %T')] Allocated slots: $allocated_slots; concurrent batches: $parallel_jobs" >&2
+
+run_one_batch() {
+    local batch_file="$1"
+    local batch_id="${batch_file##*.}"
+    local final_part="$results_dir/result.${batch_id}.tsv.gz"
+    local run_dir="$job_tmp/run.${batch_id}"
+    local raw_result="$run_dir/result.tsv"
+    local compressed_result="$run_dir/result.${batch_id}.tsv.gz"
+    local alleles
+    local this_count
+
+    if [[ -s "$final_part" ]] && gzip -t "$final_part" 2>/dev/null; then
+        echo "[$(date '+%F %T')] Skipping completed batch $batch_id" >&2
+        return 0
+    fi
+
+    if [[ -e "$final_part" ]]; then
+        mv "$final_part" "${final_part}.invalid.${job_tag}"
+    fi
+
+    mkdir -p "$run_dir/tmp"
+    alleles=$(paste -sd, "$batch_file")
+    this_count=$(wc -l < "$batch_file")
+
+    echo "[$(date '+%F %T')] Starting batch $batch_id ($this_count alleles)" >&2
+
+    (
+        cd "$run_dir"
+        export TMPDIR="$run_dir/tmp"
+        python "$predictor" \
+            "$method" \
+            "$alleles" \
+            "$combined_fasta" \
+            "$lengths" \
+            > "$raw_result"
+    )
+
+    if [[ ! -s "$raw_result" ]]; then
+        echo "ERROR: batch $batch_id produced no output." >&2
+        return 1
+    fi
+
+    # Keep the header only in the first batch. Concatenated gzip members remain
+    # a valid gzip stream and can be read normally with zcat/gzip -dc.
+    if [[ "$batch_id" == "0000" ]]; then
+        gzip -1 -c "$raw_result" > "$compressed_result"
+    else
+        tail -n +2 "$raw_result" | gzip -1 -c > "$compressed_result"
+    fi
+
+    gzip -t "$compressed_result"
+    mv "$compressed_result" "$final_part"
+
+    echo "[$(date '+%F %T')] Finished batch $batch_id" >&2
+}
+
+declare -a batch_pids=()
+declare -a batch_names=()
+failed=0
+
+wait_for_batch_group() {
+    local index
+
+    for index in "${!batch_pids[@]}"; do
+        if ! wait "${batch_pids[$index]}"; then
+            echo "ERROR: failed allele batch ${batch_names[$index]}." >&2
+            failed=1
+        fi
+    done
+
+    batch_pids=()
+    batch_names=()
+}
+
+for batch_file in "$batch_dir"/alleles.*; do
+    run_one_batch "$batch_file" &
+    batch_pids+=("$!")
+    batch_names+=("${batch_file##*.}")
+
+    if (( ${#batch_pids[@]} >= parallel_jobs )); then
+        wait_for_batch_group
+    fi
+done
+
+if (( ${#batch_pids[@]} > 0 )); then
+    wait_for_batch_group
+fi
+
+if [[ "$failed" -ne 0 ]]; then
+    echo "ERROR: at least one batch failed." >&2
+    echo "Completed .tsv.gz batches were retained in: $results_dir" >&2
+    echo "Resubmit the same script to retry only missing/invalid batches." >&2
+    exit 1
+fi
+
+# Verify every expected batch before constructing the final concatenated gzip
+# stream. Part files are retained after merging to allow independent checks and
+# recovery without recomputing successful batches.
+merged_output="$work_root/${output}.partial.${job_tag}"
+: > "$merged_output"
+
+for batch_file in "$batch_dir"/alleles.*; do
+    batch_id="${batch_file##*.}"
+    final_part="$results_dir/result.${batch_id}.tsv.gz"
+
+    if [[ ! -s "$final_part" ]] || ! gzip -t "$final_part" 2>/dev/null; then
+        echo "ERROR: missing or invalid completed result for batch $batch_id." >&2
+        exit 1
+    fi
+
+    cat "$final_part" >> "$merged_output"
+done
+
+gzip -t "$merged_output"
+mv "$merged_output" "$scheduler_work_dir/$output"
+
+echo "[$(date '+%F %T')] Job completed successfully" >&2
+echo "Final output: $scheduler_work_dir/$output" >&2
+echo "Allele manifest: $allele_manifest" >&2
+echo "Recoverable batch files: $results_dir" >&2

@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+#PBS -N KARS_MHCI_all_HLA
+#PBS -l nodes=1:ppn=7
+#PBS -l mem=32gb
+#PBS -l walltime=168:00:00
+#PBS -j oe
+#$ -S /bin/bash
+#$ -N KARS_MHCI_all_HLA
+#$ -pe smp 7
+#$ -cwd
+#$ -j y
+
+set -eo pipefail
+
+# Capture scheduler variables before sourcing .bashrc. The cluster may expose
+# either PBS/Torque names or SGE names.
+scheduler_work_dir="${PBS_O_WORKDIR:-${SGE_O_WORKDIR:-}}"
+scheduler_job_id="${PBS_JOBID:-${JOB_ID:-local_$$}}"
+
+if [[ -n "${PBS_JOBID:-}" ]]; then
+    scheduler_name="PBS"
+elif [[ -n "${JOB_ID:-}" ]]; then
+    scheduler_name="SGE"
+else
+    scheduler_name="unknown"
+fi
+
+# Load the user's shell configuration and activate the required environment.
+source /sibcb1/jizhelab1/hukaining/.bashrc
+mamba activate py39
+
+# Enable unset-variable checking only after sourcing .bashrc, because some
+# interactive shell configuration files refer to optional unset variables.
+set -u
+
+if [[ -z "$scheduler_work_dir" ]]; then
+    echo "ERROR: neither PBS_O_WORKDIR nor SGE_O_WORKDIR is set." >&2
+    echo "Submit this script from the input-file directory with qsub." >&2
+    exit 1
+fi
+
+cd "$scheduler_work_dir"
+
+predictor="/sibcb1/jizhelab1/hukaining/Biosoft/mhc_i/src/predict_binding.py"
+mhc_list="netmhcpan_MHC_list.txt"
+fasta_v2="KARS vaccine_V2.fa"
+fasta_v3="KARS vaccine_V3.fa"
+fasta_v4="KARS vaccine_V4.fa"
+output="KARS_V2_V3_V4_netmhcpan_el_all_HLA_len8-14.tsv"
+
+for required_file in "$predictor" "$mhc_list" "$fasta_v2" "$fasta_v3" "$fasta_v4"; do
+    if [[ ! -f "$required_file" ]]; then
+        echo "ERROR: required file not found: $required_file" >&2
+        exit 1
+    fi
+done
+
+if [[ -e "$output" ]]; then
+    echo "ERROR: output already exists: $output" >&2
+    echo "Rename or move the existing file before resubmitting." >&2
+    exit 1
+fi
+
+job_tag="${scheduler_job_id//[^A-Za-z0-9_.-]/_}"
+tmp_dir=$(mktemp -d "$scheduler_work_dir/.KARS_MHCI.${job_tag}.XXXXXX")
+
+cleanup() {
+    if [[ -d "$tmp_dir" ]]; then
+        rm -rf -- "$tmp_dir"
+    fi
+}
+trap cleanup EXIT
+
+combined_fasta="$tmp_dir/KARS_V2_V3_V4.no_stop.fa"
+
+# Combine all three proteins into one multi-FASTA input, give each record a
+# stable identifier, and remove terminal stop symbols. The V4 source file
+# currently has a V5 header, so normalizing the temporary header prevents V4
+# predictions from being mislabeled without changing the original FASTA.
+normalize_fasta() {
+    local input_fasta="$1"
+    local sequence_id="$2"
+
+    awk -v sequence_id="$sequence_id" '
+        NR == 1 { print ">" sequence_id; next }
+        { sub(/\*$/, ""); print }
+    ' "$input_fasta"
+}
+
+{
+    normalize_fasta "$fasta_v2" "KARS_vaccine_V2"
+    normalize_fasta "$fasta_v3" "KARS_vaccine_V3"
+    normalize_fasta "$fasta_v4" "KARS_vaccine_V4"
+} > "$combined_fasta"
+
+sequence_count=$(grep -c '^>' "$combined_fasta")
+if [[ "$sequence_count" -ne 3 ]]; then
+    echo "ERROR: expected 3 FASTA records, found $sequence_count." >&2
+    exit 1
+fi
+
+# Prevent seven concurrently launched predictors from each creating additional
+# OpenMP worker threads and oversubscribing the allocated node.
+export OMP_NUM_THREADS=1
+
+# PBS commonly reports allocated CPUs through PBS_NP/PBS_NODEFILE, whereas SGE
+# uses NSLOTS. If no allocation count is available, safely fall back to one
+# concurrent predictor.
+allocated_slots="${NSLOTS:-${PBS_NP:-${NCPUS:-1}}}"
+
+if [[ -n "${PBS_NODEFILE:-}" && -f "${PBS_NODEFILE:-}" ]]; then
+    allocated_slots=$(wc -l < "$PBS_NODEFILE")
+fi
+
+if [[ ! "$allocated_slots" =~ ^[1-9][0-9]*$ ]]; then
+    allocated_slots=1
+fi
+
+parallel_jobs="$allocated_slots"
+if (( parallel_jobs > 7 )); then
+    parallel_jobs=7
+fi
+
+run_one_length() {
+    local peptide_length="$1"
+    local run_dir="$tmp_dir/run_length_${peptide_length}"
+    local part="$tmp_dir/length_${peptide_length}.tsv"
+    local alleles
+    local lengths
+    local allele_count
+
+    mkdir -p "$run_dir"
+
+    alleles=$(
+        awk -v len="$peptide_length" \
+            'NR > 2 && $1 == "human" && $3 == len {print $2}' \
+            "$mhc_list" | paste -sd, -
+    )
+
+    lengths=$(
+        awk -v len="$peptide_length" \
+            'NR > 2 && $1 == "human" && $3 == len {print $3}' \
+            "$mhc_list" | paste -sd, -
+    )
+
+    allele_count=$(
+        awk -v len="$peptide_length" \
+            'NR > 2 && $1 == "human" && $3 == len {n++} END {print n+0}' \
+            "$mhc_list"
+    )
+
+    if [[ -z "$alleles" || -z "$lengths" || "$allele_count" -eq 0 ]]; then
+        echo "ERROR: no human allele entries found for length $peptide_length." >&2
+        return 1
+    fi
+
+    echo "[$(date '+%F %T')] Starting length ${peptide_length}: ${allele_count} HLA alleles" >&2
+
+    # Use a separate working directory for each concurrent predictor process.
+    (
+        cd "$run_dir"
+        python "$predictor" \
+            netmhcpan_el \
+            "$alleles" \
+            "$lengths" \
+            "$combined_fasta" \
+            > "$part"
+    )
+
+    echo "[$(date '+%F %T')] Finished length ${peptide_length}" >&2
+}
+
+declare -a peptide_lengths=(8 9 10 11 12 13 14)
+declare -a batch_pids=()
+declare -a batch_lengths=()
+
+echo "[$(date '+%F %T')] Job started on $(hostname)" >&2
+echo "Scheduler: $scheduler_name; job ID: $scheduler_job_id" >&2
+echo "Python: $(command -v python)" >&2
+echo "Working directory: $scheduler_work_dir" >&2
+echo "Allocated slots: $allocated_slots; concurrent predictors: $parallel_jobs" >&2
+
+failed=0
+
+wait_for_batch() {
+    local index
+
+    for index in "${!batch_pids[@]}"; do
+        if ! wait "${batch_pids[$index]}"; then
+            echo "ERROR: prediction failed for peptide length ${batch_lengths[$index]}." >&2
+            failed=1
+        fi
+    done
+
+    batch_pids=()
+    batch_lengths=()
+}
+
+for peptide_length in "${peptide_lengths[@]}"; do
+    run_one_length "$peptide_length" &
+    batch_pids+=("$!")
+    batch_lengths+=("$peptide_length")
+
+    if (( ${#batch_pids[@]} >= parallel_jobs )); then
+        wait_for_batch
+    fi
+done
+
+if (( ${#batch_pids[@]} > 0 )); then
+    wait_for_batch
+fi
+
+if [[ "$failed" -ne 0 ]]; then
+    echo "ERROR: at least one prediction failed; no final TSV was created." >&2
+    exit 1
+fi
+
+# Merge the seven outputs while retaining only the first table header.
+merged="$tmp_dir/merged.tsv"
+cp "$tmp_dir/length_8.tsv" "$merged"
+
+for peptide_length in 9 10 11 12 13 14; do
+    tail -n +2 "$tmp_dir/length_${peptide_length}.tsv" >> "$merged"
+done
+
+mv "$merged" "$scheduler_work_dir/$output"
+
+echo "[$(date '+%F %T')] Job completed successfully" >&2
+echo "Output: $scheduler_work_dir/$output" >&2
